@@ -1,6 +1,12 @@
 # # Reliable Neural Net Architecture for Stellar Predictions
 # Felix Wilton
 # 6/27/2023
+
+
+
+# This should take in a data file, and some train parameters
+# This should train the model, save it, save the training loss etc, provide a summary file
+# A seperate file should provide visualizations etc
 import os
 import numpy as np
 import h5py
