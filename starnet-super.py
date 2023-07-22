@@ -180,9 +180,6 @@ optimizer = torch.optim.Adam(model.parameters(),
 
 
 # ## Train Model
-
-
-# Total number of batch iterations for training
 cur_iter = 0
 verbose_iters = total_batch_iters/25
 losses = defaultdict(list)
