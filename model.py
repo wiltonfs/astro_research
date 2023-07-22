@@ -1,4 +1,42 @@
 class StarNet(nn.Module):
+
+    # ## Construct model
+    # 
+    # The StarNet architecture is built with:
+    # - input layer
+    # - 2 convolutional layers
+    # - 1 maxpooling layer followed by flattening for the fully connected layer
+    # - 2 fully connected layers
+    # - output layer
+
+
+    # Number of pixels per spectrum
+    num_pixels = train_dataset.num_pixels
+
+    # Number of filters used in the convolutional layers
+    num_filters = [4, 16]
+
+    # Length of the filters in the convolutional layers
+    filter_length = 8
+
+    # Length of the maxpooling window 
+    pool_length = 4
+
+    # Number of nodes in each of the hidden fully connected layers
+    num_hidden = [256, 128]
+
+    # Number of output labels
+    num_labels = len(label_keys)
+
+    def compute_out_size(in_size, mod):
+        """
+        Compute output size of Module `mod` given an input with size `in_size`.
+        """
+        
+        f = mod.forward(autograd.Variable(torch.Tensor(1, *in_size)))
+        return f.size()[1:]
+
+
     def __init__(self, num_pixels, num_filters, filter_length, 
                  pool_length, num_hidden, num_labels,
                  spectra_mean, spectra_std, labels_mean, labels_std):
