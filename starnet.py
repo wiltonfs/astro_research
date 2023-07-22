@@ -2,8 +2,6 @@
 # Felix Wilton
 # 6/27/2023
 
-
-
 # This should take in a data file, and some train parameters
 # This should train the model, save it, save the training loss etc, provide a summary file
 # A seperate file should provide visualizations etc
@@ -20,8 +18,10 @@ import torch.nn.functional as F
 import torch.autograd as autograd
 from torchsummary import summary
 
-import model
+import starmodel
 import starplotter
+import starlogger
+import stardatasets
 
 ## MAIN PARAMETERS
 ADD_NOISE = False
@@ -33,14 +33,12 @@ mean = 0
 std = 0.03
 
 ##
+output_dir = '/haha'
+logger = StarLogger(output_dir)
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-print('Using Torch version: %s' % (torch.__version__))
-print('Using a %s device' % (device))
-
-model_dir = 'models/'
-data_dir = 'datasets/'
-figure_dir = 'figures/'
+logger.log('Using Torch version: %s' % (torch.__version__))
+logger.log('Using a %s device' % (device))
 
 label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'synth_noised', 'obs_GAIA', 'obs_APOGEE']
@@ -52,79 +50,7 @@ model_identifier = 'obs_GAIA_medium'
 train_data_file = os.path.join(data_dir, 'obs_GAIA.h5')
 
 
-model_filename =  os.path.join(model_dir,model_identifier + '.pth.tar')
-
-
-
-
-# ## Datasets and Dataloader
-
-
-class SimpleSpectraDataset(torch.utils.data.Dataset):
-    
-    """
-    Dataset loader for the simple spectral datasets.
-    """
-
-    def __init__(self, data_file, dataset, label_keys):
-        
-        self.data_file = data_file
-        self.dataset = dataset.lower()
-        self.label_keys = label_keys
-        # Determine the number of pixels in each spectrum
-        self.num_pixels = self.determine_num_pixels()
-        self.num_spectra = self.determine_num_spectra()
-                        
-    def __len__(self):
-        return self.num_spectra
-    
-    def determine_num_spectra(self):
-        with h5py.File(self.data_file, "r") as f:    
-            count = len(f['spectra %s' % self.dataset])
-        return count
-    
-    def determine_num_pixels(self):
-        with h5py.File(self.data_file, "r") as f:    
-            pixels = f['spectra %s' % self.dataset].shape[1]
-        return pixels
-    
-    def __getitem__(self, idx):
-        
-        with h5py.File(self.data_file, "r") as f: 
-                
-            # Load spectrum
-            spectrum = f['spectra %s' % self.dataset][idx]
-            spectrum[spectrum<-1] = -1.
-            spectrum = torch.from_numpy(spectrum.astype(np.float32))
-            
-            # Load target stellar labels
-            data_keys = f.keys()
-            labels = []
-            for k in self.label_keys:
-                data_key = k + ' %s' % self.dataset
-                if data_key in data_keys:
-                    labels.append(f[data_key][idx])
-                else:
-                    labels.append(np.nan)
-            labels = torch.from_numpy(np.asarray(labels).astype(np.float32))
-            
-        # Return full spectrum and target labels
-        return {'spectrum':spectrum,
-                'labels':labels}
-    
-def batch_to_device(batch, device):
-    '''Convert a batch of samples to the desired device.'''
-    for k in batch.keys():
-        if isinstance(batch[k], list):
-            for i in range(len(batch[k])):
-                batch[k][i] = batch[k][i].to(device)
-        else:
-            try:
-                batch[k] = batch[k].to(device)
-            except AttributeError:
-                batch[k] = torch.tensor(batch[k]).to(device)
-    return batch
-
+model_filename =  os.path.join(output_dir,'model.pth.tar')
 
 # Collect the necessary information to normalize the input spectra as well as the target labels. During training, the spectra and labels will be normalized to have approximately have a mean of zero and unit variance.
 # 
@@ -161,8 +87,8 @@ val_dataloader = torch.utils.data.DataLoader(val_dataset,
                                                    num_workers=1,
                                                    pin_memory=True)
 
-print('The training set consists of %i spectra.' % (len(train_dataset)))
-print('The validation set consists of %i spectra.' % (len(val_dataset)))
+logger.log('The training set consists of %i spectra.' % (len(train_dataset)))
+logger.log('The validation set consists of %i spectra.' % (len(val_dataset)))
 
 model = StarNet(num_pixels, num_filters, filter_length, 
                 pool_length, num_hidden, num_labels,
@@ -186,7 +112,7 @@ verbose_iters = total_batch_iters/25
 losses = defaultdict(list)
 running_loss = []
 
-print('Started Training...')
+logger.log('Started Training...')
 
 # Start timer
 train_start_time = time.time()
@@ -272,11 +198,11 @@ while cur_iter < (total_batch_iters):
             losses['train_loss'].append(train_loss)
             losses['val_loss'].append(val_loss)
 
-            # Print progress
-            print('[Iter %i, %0.0f%%]' % (cur_iter, cur_iter/total_batch_iters*100))
-            print('\tTrain Loss: %0.4f' % (train_loss))
-            print('\tVal Loss: %0.4f' % (val_loss))
-            print('\tTime taken: %0.0f seconds' % (time.time() - iter_start_time))
+            # logger.log progress
+            logger.log('[Iter %i, %0.0f%%]' % (cur_iter, cur_iter/total_batch_iters*100))
+            logger.log('\tTrain Loss: %0.4f' % (train_loss))
+            logger.log('\tVal Loss: %0.4f' % (val_loss))
+            logger.log('\tTime taken: %0.0f seconds' % (time.time() - iter_start_time))
             
             # Save model
             torch.save({'optimizer' : optimizer.state_dict(),
@@ -296,8 +222,8 @@ while cur_iter < (total_batch_iters):
                         'losses' : losses,
                         'train_time' : time.time() - train_start_time},
                        model_filename)
-            print('Finished Training')
-            print('Total time taken: %0.0f seconds' % (time.time() - train_start_time))
+            logger.log('Finished Training')
+            logger.log('Total time taken: %0.0f seconds' % (time.time() - train_start_time))
             break
 
 plotter = StarPlotter()
@@ -351,7 +277,7 @@ for dataset in datasets:
                                                    shuffle=False, 
                                                    num_workers=1,
                                                    pin_memory=True)
-    print("Created dataset for " + dataset + " with size " + str(len(val_datasets[dataset])))
+    logger.log("Created dataset for " + dataset + " with size " + str(len(val_datasets[dataset])))
 
 # Set parameters to not trainable
 model.eval()
@@ -360,7 +286,7 @@ model.eval()
 ground_truth_labels = {}
 model_pred_labels = {}
 
-print("Started predicting labels")
+logger.log("Started predicting labels")
 with torch.no_grad():
     for dataset in datasets:
         ground_truth_labels[dataset] = []
@@ -382,8 +308,8 @@ with torch.no_grad():
         
         ground_truth_labels[dataset] = np.concatenate(ground_truth_labels[dataset])
         model_pred_labels[dataset] = np.concatenate(model_pred_labels[dataset])
-        print("\tPredicted labels for " + dataset)
-print("Done!")
+        logger.log("\tPredicted labels for " + dataset)
+logger.log("Done!")
 
 
 # ### Plotting helper functions
