@@ -9,25 +9,6 @@ class StarNet(nn.Module):
     # - 2 fully connected layers
     # - output layer
 
-
-    # Number of pixels per spectrum
-    num_pixels = train_dataset.num_pixels
-
-    # Number of filters used in the convolutional layers
-    num_filters = [4, 16]
-
-    # Length of the filters in the convolutional layers
-    filter_length = 8
-
-    # Length of the maxpooling window 
-    pool_length = 4
-
-    # Number of nodes in each of the hidden fully connected layers
-    num_hidden = [256, 128]
-
-    # Number of output labels
-    num_labels = len(label_keys)
-
     def compute_out_size(in_size, mod):
         """
         Compute output size of Module `mod` given an input with size `in_size`.
@@ -41,6 +22,24 @@ class StarNet(nn.Module):
                  pool_length, num_hidden, num_labels,
                  spectra_mean, spectra_std, labels_mean, labels_std):
         super().__init__()
+
+        # Number of pixels per spectrum
+        num_pixels = train_dataset.num_pixels
+
+        # Number of filters used in the convolutional layers
+        num_filters = [4, 16]
+
+        # Length of the filters in the convolutional layers
+        filter_length = 8
+
+        # Length of the maxpooling window 
+        pool_length = 4
+
+        # Number of nodes in each of the hidden fully connected layers
+        num_hidden = [256, 128]
+
+        # Number of output labels
+        num_labels = len(label_keys)
         
         # Save distribution of training data
         self.spectra_mean = spectra_mean

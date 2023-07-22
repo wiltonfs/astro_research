@@ -21,6 +21,7 @@ import torch.autograd as autograd
 from torchsummary import summary
 
 import model
+import starplotter
 
 ## MAIN PARAMETERS
 ADD_NOISE = False
@@ -299,28 +300,14 @@ while cur_iter < (total_batch_iters):
             print('Total time taken: %0.0f seconds' % (time.time() - train_start_time))
             break
 
+plotter = StarPlotter()
 
-# ## Plot training progress
-# Let's see train and validation loss over the iterations
+plotter.plot_train_progress()
 
-import matplotlib.pyplot as plt
 
-plt.figure(figsize=(8,3))
 
-# Determine iteration of checkpoint
-batch_iters = np.linspace(cur_iter/len(losses['train_loss']), 
-                          cur_iter, len(losses['train_loss']))
 
-# Plot training and validation progress
-plt.plot(batch_iters, losses['train_loss'], label='Training')
-plt.plot(batch_iters, losses['val_loss'], label='Validation')
-plt.xlim(batch_iters[0], batch_iters[-1])
-plt.ylim(0, 1.1*losses['val_loss'][2])
-plt.legend(fontsize=12)
-plt.grid()
-plt.title(model_identifier)
-plt.savefig(figure_dir + model_identifier + ".png")
-plt.show()
+
 
 
 # ## Apply model to datasets
