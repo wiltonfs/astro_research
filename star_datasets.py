@@ -2,6 +2,9 @@
 # Felix Wilton
 # 7/22/2023
 import torch
+import h5py
+import numpy as np
+
 class SimpleSpectraDataset(torch.utils.data.Dataset):
     """
     Dataset loader for the simple spectral datasets.

@@ -16,24 +16,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd as autograd
-from torchsummary import summary
 
-import starmodel
-import starplotter
-import starlogger
-import stardatasets
+from star_model import *
+from star_plotter import *
+from star_logger import *
+from star_datasets import *
 
 ## MAIN PARAMETERS
-ADD_NOISE = False
 batch_size = 16
 learning_rate = 0.001
 total_batch_iters = int(1e5)
 # Noise parameters
+ADD_NOISE = False
 mean = 0
 std = 0.03
 
 ##
-output_dir = '/haha'
+output_dir = 'outputs/outs1'
+data_dir = 'data'
 logger = StarLogger(output_dir)
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -43,12 +43,7 @@ logger.log('Using a %s device' % (device))
 label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'synth_noised', 'obs_GAIA', 'obs_APOGEE']
 
-
-
-
-model_identifier = 'obs_GAIA_medium'
 train_data_file = os.path.join(data_dir, 'obs_GAIA.h5')
-
 
 model_filename =  os.path.join(output_dir,'model.pth.tar')
 
@@ -62,30 +57,14 @@ with h5py.File(train_data_file, "r") as f:
     labels_std = [np.nanstd(f[k + ' train'][:]) for k in label_keys]
     spectra_mean = np.nanmean(f['spectra train'][:]) 
     spectra_std = np.nanstd(f['spectra train'][:])
-    
-
 
 # Training data
-train_dataset = SimpleSpectraDataset(train_data_file, 
-                                            dataset='train', 
-                                            label_keys=label_keys)
-
-train_dataloader = torch.utils.data.DataLoader(train_dataset,
-                                                      batch_size=batch_size, 
-                                                      shuffle=True, 
-                                                      num_workers=1,
-                                                      pin_memory=True)
+train_dataset = SimpleSpectraDataset(train_data_file, 'train', label_keys)
+train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
 
 # Validation data
-val_dataset = SimpleSpectraDataset(train_data_file, 
-                                         dataset='val', 
-                                            label_keys=label_keys)
-
-val_dataloader = torch.utils.data.DataLoader(val_dataset,
-                                                   batch_size=batch_size, 
-                                                   shuffle=False, 
-                                                   num_workers=1,
-                                                   pin_memory=True)
+val_dataset = SimpleSpectraDataset(train_data_file, 'val', label_keys)
+val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
 
 logger.log('The training set consists of %i spectra.' % (len(train_dataset)))
 logger.log('The validation set consists of %i spectra.' % (len(val_dataset)))
@@ -93,18 +72,14 @@ logger.log('The validation set consists of %i spectra.' % (len(val_dataset)))
 model = StarNet(num_pixels, num_filters, filter_length, 
                 pool_length, num_hidden, num_labels,
                 spectra_mean, spectra_std, labels_mean, labels_std)
-model = model.to(device)
 
-summary(model, (num_pixels, ))
+model = model.to(device)
 
 ## Define optimizer
 ## The Adam optimizer is the gradient descent algorithm used for minimizing the loss function
 
 # Initial learning rate for optimization algorithm
-optimizer = torch.optim.Adam(model.parameters(), 
-                             learning_rate,
-                             weight_decay=0)
-
+optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=0)
 
 # ## Train Model
 cur_iter = 0
@@ -232,10 +207,6 @@ plotter.plot_train_progress()
 
 
 
-
-
-
-
 # ## Apply model to datasets
 # Let's compare our predictions to their real labels
 
@@ -258,31 +229,25 @@ if True == False:
     model.load_state_dict(checkpoint['model'])
 
 
-# ### Get Validation Data
-
-
-# Get validation data
+## Try model on the 4 validation datasets
 batch_size = 16
 
 val_datasets = {}
 val_dataloaders = {}
 for dataset in datasets:
     load_path = os.path.join(data_dir, dataset+'.h5')
-    val_datasets[dataset] = SimpleSpectraDataset(load_path, 
-                                       dataset='val', 
-                                       label_keys=label_keys)
+    val_datasets[dataset] = SimpleSpectraDataset(load_path, dataset='val', label_keys=label_keys)
 
     val_dataloaders[dataset] = torch.utils.data.DataLoader(val_datasets[dataset],
                                                    batch_size=batch_size, 
                                                    shuffle=False, 
                                                    num_workers=1,
                                                    pin_memory=True)
-    logger.log("Created dataset for " + dataset + " with size " + str(len(val_datasets[dataset])))
-
-# Set parameters to not trainable
-model.eval()
+    logger.log("Created validation dataset for " + dataset + " with size " + str(len(val_datasets[dataset])))
 
 # Predict labels of the validation spectra
+# Set parameters to not trainable
+model.eval()
 ground_truth_labels = {}
 model_pred_labels = {}
 
@@ -312,147 +277,9 @@ with torch.no_grad():
 logger.log("Done!")
 
 
-# ### Plotting helper functions
+
+plotter.plot_losses()
+plotter.plot_isochrones()
 
 
-def pretty(label):
-    label_fancy = label
-    
-    if label=='teff':
-        label_fancy = 'T$_{\mathrm{eff}}$ [K]'
-    if label=='feh':
-        label_fancy = '[Fe/H]'
-    if label=='logg':
-        label_fancy = 'log(g)'
-    if label=='alpha':
-        label_fancy = r'[$\alpha$/H]'
-        
-    if label=='synth_clean':
-        label_fancy = 'Synthetic Data'
-    if label=='synth_noised':
-        label_fancy = 'Synthetic Data, Added Noise'
-    if label=='obs_GAIA':
-        label_fancy = 'Observed Data, GAIA Labels'
-    if label=='obs_APOGEE':
-        label_fancy = 'Observed Data, APOGEE Labels'
-        
-    return label_fancy
 
-def getColor(dataset):
-    color = 'blue'
-    
-    if dataset=='synth_clean':
-        color = 'violet'
-    if dataset=='synth_noised':
-        color = 'violet'
-    if dataset=='obs_GAIA':
-        color = 'forestgreen'
-    if dataset=='obs_APOGEE':
-        color = 'forestgreen'
-    
-    return color
-
-
-# ### Plot Performance on Validation Sets
-
-
-y_lims = [1000, 1.2, 1.5, 0.8]
-x_lims = [[2000, 9000],
-          [-5.1, 1.1],
-          [-1, 6],
-          [-0.5, 0.9]]
-saving = True
-
-for i, label in enumerate(label_keys):
-    # Create the main figure and set the title
-    pretty_label = pretty(label)
-    fig = plt.figure(figsize=(15, 8))
-    fig.suptitle(pretty_label, fontsize=16, fontweight='bold')
-
-    # Iterate through the labels and create subplots
-    for j, dataset in enumerate(datasets):
-        # Create a subplot in the 2x2 grid
-        ax = fig.add_subplot(2, 2, j+1)
-        
-        # Calculate residual
-        diff = model_pred_labels[dataset][:,i] - ground_truth_labels[dataset][:,i]
-        
-        # Create scatter plot on the given axes
-        color = getColor(dataset)
-        ax.scatter(ground_truth_labels[dataset][:,i], diff, alpha=0.5, s=5, zorder=1, c=color)
-
-        # Customize each subplot
-        pretty_dataset = pretty(dataset)
-        ax.set_title(pretty_dataset)
-        ax.set_xlabel(pretty_label, size=4*len(label_keys))
-        ax.set_ylabel(r'$\Delta$ %s' % pretty_label, size=4*len(label_keys))
-        
-        # Add mean and spread information
-        bbox_props = dict(boxstyle="square,pad=0.3", fc="w", ec="k", lw=1)
-        if 'eff' in label:
-            ax.annotate('$\widetilde{m}$=%0.0f $s$=%0.0f'% (np.nanmean(diff), np.nanstd(diff)),
-                        (0.75,0.8), size=4*len(label_keys), xycoords='axes fraction', 
-                        bbox=bbox_props)
-        else:
-            ax.annotate('$\widetilde{m}$=%0.2f $s$=%0.2f'% (np.nanmean(diff), np.nanstd(diff)),
-                    (0.75,0.8), size=4*len(label_keys), xycoords='axes fraction', 
-                    bbox=bbox_props)
-        
-        ax.axhline(0, linewidth=2, c='black', linestyle='--')
-        ax.set_ylim(-y_lims[i], y_lims[i])
-        ax.set_xlim(x_lims[i][0], x_lims[i][1])
-        ax.set_yticks([-y_lims[i], -0.5*y_lims[i], 0, 0.5*y_lims[i], y_lims[i]])
-        ax.tick_params(labelsize=2.8*len(label_keys))
-        ax.grid()
-    
-    # Adjust the spacing between subplots
-    fig.tight_layout()
-    
-    # Save the figure
-    if saving is True:
-        savename = figure_dir + model_identifier + '_' + label + '.png'
-        plt.savefig(savename, facecolor='white', transparent=False, dpi=100,
-                    bbox_inches='tight', pad_inches=0.05)
-
-    # Show the figure
-    plt.show()
-
-
-# ### Plot Isochrones
-
-
-# Create the main figure and set the title
-fig = plt.figure(figsize=(15, 10))
-fig.suptitle('Isochrones', fontsize=16, fontweight='bold')
-
-# Iterate through the labels and create subplots
-for j, dataset in enumerate(datasets):
-    # Create a subplot in the 2x2 grid
-    ax = fig.add_subplot(2, 2, j+1)
-
-    scatter = ax.scatter(model_pred_labels[dataset][:,0], model_pred_labels[dataset][:,2], c=model_pred_labels[dataset][:,1], cmap='viridis', s=0.4)
-    
-    # Customize each subplot
-    pretty_dataset = pretty(dataset)
-    ax.set_title(pretty_dataset)
-    ax.set_xlabel(pretty('teff'), size=4*len(label_keys))
-    ax.set_ylabel(pretty('logg'), size=4*len(label_keys))
-
-    # Show colorbar
-    cbar = plt.colorbar(scatter, ax=ax)
-    cbar.set_label(pretty('feh'), rotation=90, labelpad=15)
-    
-    ax.set_ylim(6, 0)
-    ax.set_xlim(7000, 2500)
-
-# Adjust the spacing between subplots
-fig.tight_layout()
-
-# Save the figure
-if saving is True:
-    savename = figure_dir + model_identifier + '_isochrones.png'
-    plt.savefig(savename, facecolor='white', transparent=False, dpi=100,
-                bbox_inches='tight', pad_inches=0.05)
-
-# Show the figure
-plt.show()
