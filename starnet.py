@@ -5,6 +5,7 @@
 # This should take in a data file, and some train parameters
 # This should train the model, save it, save the training loss etc, provide a summary file
 # A seperate file should provide visualizations etc
+
 import os
 import numpy as np
 import h5py
@@ -25,63 +26,70 @@ from star_datasets import *
 ## MAIN PARAMETERS
 batch_size = 16
 learning_rate = 0.001
-total_batch_iters = int(1e5)
+total_batch_iters = int(1e2)
+output_dir = 'outputs/outs1'
+data_dir = 'data'
 # Noise parameters
 ADD_NOISE = False
 mean = 0
 std = 0.03
 
-##
-output_dir = 'outputs/outs1'
-data_dir = 'data'
-logger = StarLogger(output_dir)
 
+label_keys = ['teff', 'feh', 'logg', 'alpha']
+datasets = ['synth_clean', 'synth_noised', 'obs_GAIA', 'obs_APOGEE']
+TRAIN_DATASET_SELECT = 0
+
+
+logger = StarLogger(output_dir)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 logger.log('Using Torch version: %s' % (torch.__version__))
 logger.log('Using a %s device' % (device))
 
-label_keys = ['teff', 'feh', 'logg', 'alpha']
-datasets = ['synth_clean', 'synth_noised', 'obs_GAIA', 'obs_APOGEE']
 
-train_data_file = os.path.join(data_dir, 'obs_GAIA.h5')
-
+train_data_file = os.path.join(data_dir, datasets[TRAIN_DATASET_SELECT] + '.h5')
 model_filename =  os.path.join(output_dir,'model.pth.tar')
 
-# Collect the necessary information to normalize the input spectra as well as the target labels. During training, the spectra and labels will be normalized to have approximately have a mean of zero and unit variance.
-# 
-# NOTE: This is necessary to put output labels on a similar scale in order for the model to train properly, this process is reversed in the test stage to give the output labels their proper units.
-
-# Collect mean and std of the training data
+# Collect mean and std of the training data for normalization
 with h5py.File(train_data_file, "r") as f:
     labels_mean = [np.nanmean(f[k + ' train'][:]) for k in label_keys]
     labels_std = [np.nanstd(f[k + ' train'][:]) for k in label_keys]
     spectra_mean = np.nanmean(f['spectra train'][:]) 
     spectra_std = np.nanstd(f['spectra train'][:])
 
+
+
+## DATASETS
+
 # Training data
 train_dataset = SimpleSpectraDataset(train_data_file, 'train', label_keys)
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
 
-# Validation data
-val_dataset = SimpleSpectraDataset(train_data_file, 'val', label_keys)
-val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
+# Create the 4 validation datasets
+batch_size = 16
+val_datasets = {}
+val_dataloaders = {}
+for dataset in datasets:
+    load_path = os.path.join(data_dir, dataset+'.h5')
+    val_datasets[dataset] = SimpleSpectraDataset(load_path, 'val', label_keys)
+    val_dataloaders[dataset] = torch.utils.data.DataLoader(val_datasets[dataset], batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
+    logger.log("Created validation dataset for " + dataset + " with size " + str(len(val_datasets[dataset])))
 
+# Validation data
+val_dataset = val_datasets[TRAIN_DATASET_SELECT]
+val_dataloader = val_dataloaders[TRAIN_DATASET_SELECT]
 logger.log('The training set consists of %i spectra.' % (len(train_dataset)))
 logger.log('The validation set consists of %i spectra.' % (len(val_dataset)))
 
-model = StarNet(num_pixels, num_filters, filter_length, 
-                pool_length, num_hidden, num_labels,
-                spectra_mean, spectra_std, labels_mean, labels_std)
 
+
+
+
+
+model = StarNet(num_pixels, num_filters, filter_length, pool_length, num_hidden, num_labels, spectra_mean, spectra_std, labels_mean, labels_std)
 model = model.to(device)
-
-## Define optimizer
-## The Adam optimizer is the gradient descent algorithm used for minimizing the loss function
-
-# Initial learning rate for optimization algorithm
 optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=0)
 
-# ## Train Model
+## TRAIN MODEL
 cur_iter = 0
 verbose_iters = total_batch_iters/25
 losses = defaultdict(list)
@@ -116,10 +124,7 @@ while cur_iter < (total_batch_iters):
                             denorm_out=False)
         
         # Compute mean-squared-error loss between predictions and normalized targets
-        loss = torch.nn.MSELoss()(label_preds, 
-                                  model.normalize(train_batch['labels'], 
-                                                  model.labels_mean,
-                                                  model.labels_std))
+        loss = torch.nn.MSELoss()(label_preds, model.normalize(train_batch['labels'], model.labels_mean, model.labels_std))
         
         # Back-propagation
         loss.backward()
@@ -159,10 +164,8 @@ while cur_iter < (total_batch_iters):
                                         denorm_out=False)
 
                     # Compute mean-squared-error loss between predictions and normalized targets
-                    loss = torch.nn.MSELoss()(label_preds, 
-                                              model.normalize(val_batch['labels'], 
-                                                              model.labels_mean,
-                                                              model.labels_std))
+                    loss = torch.nn.MSELoss()(label_preds, model.normalize(val_batch['labels'], model.labels_mean, model.labels_std))
+
                     # Save losses to find average later
                     running_loss.append(float(loss))
                     
@@ -206,13 +209,6 @@ plotter = StarPlotter()
 plotter.plot_train_progress()
 
 
-
-# ## Apply model to datasets
-# Let's compare our predictions to their real labels
-
-# ### Load model
-
-
 # Load model info
 if True == False:
     load_model = os.path.join(model_dir,'cnn_synth_clean_1.pth.tar')
@@ -230,24 +226,7 @@ if True == False:
 
 
 ## Try model on the 4 validation datasets
-batch_size = 16
-
-val_datasets = {}
-val_dataloaders = {}
-for dataset in datasets:
-    load_path = os.path.join(data_dir, dataset+'.h5')
-    val_datasets[dataset] = SimpleSpectraDataset(load_path, dataset='val', label_keys=label_keys)
-
-    val_dataloaders[dataset] = torch.utils.data.DataLoader(val_datasets[dataset],
-                                                   batch_size=batch_size, 
-                                                   shuffle=False, 
-                                                   num_workers=1,
-                                                   pin_memory=True)
-    logger.log("Created validation dataset for " + dataset + " with size " + str(len(val_datasets[dataset])))
-
-# Predict labels of the validation spectra
-# Set parameters to not trainable
-model.eval()
+model.eval() # Set parameters to not trainable
 ground_truth_labels = {}
 model_pred_labels = {}
 

@@ -25,22 +25,22 @@ class StarNet(nn.Module):
         super().__init__()
 
         # Number of pixels per spectrum
-    num_pixels = train_dataset.num_pixels
+        num_pixels = train_dataset.num_pixels
 
-    # Number of filters used in the convolutional layers
-    num_filters = [4, 16]
+        # Number of filters used in the convolutional layers
+        num_filters = [4, 16]
 
-    # Length of the filters in the convolutional layers
-    filter_length = 8
+        # Length of the filters in the convolutional layers
+        filter_length = 8
 
-    # Length of the maxpooling window 
-    pool_length = 4
+        # Length of the maxpooling window 
+        pool_length = 4
 
-    # Number of nodes in each of the hidden fully connected layers
-    num_hidden = [256, 128]
+        # Number of nodes in each of the hidden fully connected layers
+        num_hidden = [256, 128]
 
-    # Number of output labels
-    num_labels = len(label_keys)
+        # Number of output labels
+        num_labels = len(label_keys)
         
         # Save distribution of training data
         self.spectra_mean = spectra_mean
