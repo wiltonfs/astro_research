@@ -11,12 +11,10 @@ import numpy as np
 import h5py
 from collections import defaultdict
 import time
-import matplotlib.pyplot as plt
-
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.autograd as autograd
+import torch.utils.data.DataLoader
+
+
 
 from star_model import *
 from star_plotter import *
@@ -43,7 +41,7 @@ TRAIN_DATASET_SELECT = 0
 logger = StarLogger(output_dir)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 logger.log('Using Torch version: %s' % (torch.__version__))
-logger.log('Using a %s device' % (device))
+logger.log('Using a %s device\n' % (device))
 
 
 train_data_file = os.path.join(data_dir, datasets[TRAIN_DATASET_SELECT] + '.h5')
@@ -65,27 +63,24 @@ train_dataset = SimpleSpectraDataset(train_data_file, 'train', label_keys)
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
 
 # Create the 4 validation datasets
-batch_size = 16
+val_batch_size = 16
 val_datasets = {}
 val_dataloaders = {}
 for dataset in datasets:
     load_path = os.path.join(data_dir, dataset+'.h5')
     val_datasets[dataset] = SimpleSpectraDataset(load_path, 'val', label_keys)
-    val_dataloaders[dataset] = torch.utils.data.DataLoader(val_datasets[dataset], batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
+    val_dataloaders[dataset] = torch.utils.data.DataLoader(val_datasets[dataset], batch_size=val_batch_size, shuffle=False, num_workers=1, pin_memory=True)
     logger.log("Created validation dataset for " + dataset + " with size " + str(len(val_datasets[dataset])))
 
 # Validation data
-val_dataset = val_datasets[TRAIN_DATASET_SELECT]
-val_dataloader = val_dataloaders[TRAIN_DATASET_SELECT]
+val_dataset = val_datasets[datasets[TRAIN_DATASET_SELECT]]
+val_dataloader = val_dataloaders[datasets[TRAIN_DATASET_SELECT]]
 logger.log('The training set consists of %i spectra.' % (len(train_dataset)))
 logger.log('The validation set consists of %i spectra.' % (len(val_dataset)))
 
 
 
-
-
-
-model = StarNet(num_pixels, num_filters, filter_length, pool_length, num_hidden, num_labels, spectra_mean, spectra_std, labels_mean, labels_std)
+model = StarNet(label_keys, device, train_dataset, spectra_mean, spectra_std, labels_mean, labels_std)
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=0)
 
@@ -211,10 +206,10 @@ plotter.plot_train_progress()
 
 # Load model info
 if True == False:
+    model_dir = ""
     load_model = os.path.join(model_dir,'cnn_synth_clean_1.pth.tar')
 
-    checkpoint = torch.load(load_model, 
-                            map_location=lambda storage, loc: storage)
+    checkpoint = torch.load(load_model, map_location=lambda storage, loc: storage)
     losses = dict(checkpoint['losses'])
     cur_iter = checkpoint['batch_iters']
 

@@ -11,7 +11,6 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
     """
 
     def __init__(self, data_file, dataset, label_keys):
-        
         self.data_file = data_file
         self.dataset = dataset.lower()
         self.label_keys = label_keys

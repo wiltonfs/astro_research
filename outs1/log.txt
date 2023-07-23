@@ -1,2 +1,0 @@
-[0.00]	Created logger
-[5.02]	Done

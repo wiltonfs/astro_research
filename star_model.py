@@ -1,4 +1,17 @@
+import torch
 import torch.nn as nn
+import torch.autograd as autograd
+import torch.nn.functional as F
+import numpy as np
+
+def compute_out_size(in_size, mod):
+    """
+    Compute output size of Module `mod` given an input with size `in_size`.
+    """
+    
+    f = mod.forward(autograd.Variable(torch.Tensor(1, *in_size)))
+    return f.size()[1:]
+
 class StarNet(nn.Module):
 
     # ## Construct model
@@ -10,18 +23,7 @@ class StarNet(nn.Module):
     # - 2 fully connected layers
     # - output layer
 
-    def compute_out_size(in_size, mod):
-        """
-        Compute output size of Module `mod` given an input with size `in_size`.
-        """
-        
-        f = mod.forward(autograd.Variable(torch.Tensor(1, *in_size)))
-        return f.size()[1:]
-
-
-    def __init__(self, num_pixels, num_filters, filter_length, 
-                 pool_length, num_hidden, num_labels,
-                 spectra_mean, spectra_std, labels_mean, labels_std):
+    def __init__(self, label_keys, device, train_dataset, spectra_mean, spectra_std, labels_mean, labels_std):
         super().__init__()
 
         # Number of pixels per spectrum
