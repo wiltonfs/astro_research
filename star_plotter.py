@@ -3,6 +3,7 @@
 # 7/22/2023
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 ### Plotting helper functions
 def pretty(label):
@@ -50,9 +51,6 @@ class StarPlotter():
         self.label_keys = label_keys
         self.datasets = datasets
         self.SAVING = saving
-
-
-
     
     # Plot train and validation loss over the iterations
     def plot_train_progress(self, cur_iter, losses):
@@ -69,10 +67,10 @@ class StarPlotter():
         plt.legend(fontsize=12)
         plt.grid()
         plt.title("Training Progress")
-        plt.show()
-
         if self.SAVING:
-            plt.savefig(self.dir + "trainProgress.png")
+            path = os.path.join(self.dir,"trainProgress.png")
+            plt.savefig(path)
+        plt.show()
 
     # Plot the isochrones
     def plot_isochrones(self, model_pred_labels):
@@ -102,12 +100,13 @@ class StarPlotter():
 
         # Adjust the spacing between subplots
         fig.tight_layout()
-        plt.show()
+        
 
         # Save the figure
         if self.SAVING:
-            savename = self.dir + 'isochrones.png'
-            plt.savefig(savename, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
+            path = os.path.join(self.dir,'isochrones.png')
+            plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
+        plt.show()
 
     #Plot performance on Validation Sets
     def plot_losses(self, model_pred_labels, ground_truth_labels):
@@ -161,12 +160,12 @@ class StarPlotter():
             
             # Adjust the spacing between subplots
             fig.tight_layout()
-            plt.show()
 
             # Save the figure
             if self.SAVING:
-                savename = self.dir + label + '.png'
-                plt.savefig(savename, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
+                path = os.path.join(self.dir,label + '.png')
+                plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
+            plt.show()
 
 
 

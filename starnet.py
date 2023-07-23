@@ -12,7 +12,6 @@ import h5py
 from collections import defaultdict
 import time
 import torch
-import torch.utils.data.DataLoader
 
 
 
@@ -199,9 +198,9 @@ while cur_iter < (total_batch_iters):
             logger.log('Total time taken: %0.0f seconds' % (time.time() - train_start_time))
             break
 
-plotter = StarPlotter()
+plotter = StarPlotter(output_dir, label_keys, datasets, saving=True)
 
-plotter.plot_train_progress()
+plotter.plot_train_progress(cur_iter, losses)
 
 
 # Load model info
@@ -248,12 +247,15 @@ with torch.no_grad():
         ground_truth_labels[dataset] = np.concatenate(ground_truth_labels[dataset])
         model_pred_labels[dataset] = np.concatenate(model_pred_labels[dataset])
         logger.log("\tPredicted labels for " + dataset)
+
+
+
+
+plotter.plot_losses(model_pred_labels, ground_truth_labels)
+logger.log("Plotted and saved losses")
+plotter.plot_isochrones(model_pred_labels)
+logger.log("Plotted and saved isochrones")
 logger.log("Done!")
-
-
-
-plotter.plot_losses()
-plotter.plot_isochrones()
 
 
 
