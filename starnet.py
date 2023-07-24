@@ -6,7 +6,7 @@
 # This should train the model, save it, save the training loss etc, provide a summary file
 # A seperate file should provide visualizations etc
 
-# TODO log model params
+# TODO log model params, progress plot fix
 
 import os
 import numpy as np
@@ -26,6 +26,7 @@ from star_datasets import *
 batch_size = 16
 learning_rate = 0.001
 total_batch_iters = int(1e2)
+val_steps = 5
 output_dir = 'outputs/outs1'
 data_dir = 'data'
 # Noise parameters
@@ -83,7 +84,7 @@ optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=0)
 
 ## TRAIN MODEL
 cur_iter = 0
-verbose_iters = total_batch_iters/5
+verbose_iters = total_batch_iters/val_steps
 losses = defaultdict(list)
 running_loss = []
 

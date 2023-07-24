@@ -61,11 +61,13 @@ class StarPlotter():
 
         # Plot training and validation progress
         plt.plot(batch_iters, losses['train_loss'], label='Training', color='black', linewidth=2)
+        ylim = 0
         for dataset in self.datasets:
             plt.plot(batch_iters, losses['val_loss_'+dataset], color = getColor(dataset), label=pretty(dataset) + ' Validation')
-        
+            ylim = max(losses['val_loss_'+dataset][2], ylim)
+
         plt.xlim(batch_iters[0], batch_iters[-1])
-        plt.ylim(0, 1.1*losses['val_loss'][2])
+        plt.ylim(0, 1.1*ylim)
         plt.legend(fontsize=12)
         plt.grid()
         plt.title("Training Progress")
