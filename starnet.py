@@ -2,11 +2,7 @@
 # Felix Wilton
 # 6/27/2023
 
-# This should take in a data file, and some train parameters
-# This should train the model, save it, save the training loss etc, provide a summary file
-# A seperate file should provide visualizations etc
-
-# TODO log model params, progress plot fix
+# TODO summary file, file naming convention, noise generation
 
 import os
 import numpy as np
@@ -45,6 +41,24 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 logger.log('Using Torch version: %s' % (torch.__version__))
 logger.log('Using a %s device\n' % (device))
 
+# Record model parameters
+params = {
+    'batch_size': batch_size,
+    'learning_rate': learning_rate,
+    'total_batch_iters': total_batch_iters,
+    'val_steps': val_steps,
+    'ADD_NOISE': ADD_NOISE,
+    'mean': mean,
+    'std': std,
+    'label_keys': label_keys,
+    'datasets': datasets,
+    'TRAIN_DATASET_SELECT': TRAIN_DATASET_SELECT
+}
+output_file = os.path.join(output_dir, 'params.txt')
+with open(output_file, 'w') as paramFile:
+    for key, value in params.items():
+        paramFile.write(f"{key} = {value}\n")
+logger.log('Logged model parameters')
 
 train_data_file = os.path.join(data_dir, datasets[TRAIN_DATASET_SELECT] + '.h5')
 model_filename =  os.path.join(output_dir,'model.pth.tar')
@@ -262,6 +276,8 @@ logger.log("Plotted and saved losses")
 plotter.plot_isochrones(model_pred_labels)
 logger.log("Plotted and saved isochrones")
 logger.log("Done!")
+
+logger.close()
 
 
 
