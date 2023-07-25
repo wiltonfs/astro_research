@@ -65,7 +65,7 @@ train_dataset = SimpleSpectraDataset(train_data_file, 'train', label_keys)
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
 
 # Create the 4 validation datasets
-val_batch_size = 16
+val_batch_size = 1024
 val_datasets = {}
 val_dataloaders = {}
 for dataset in datasets:

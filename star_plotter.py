@@ -43,6 +43,20 @@ def getColor(dataset):
     
     return color
 
+def getLinestyle(dataset):
+    style = '-'
+    
+    if dataset=='synth_clean':
+        style = '-'
+    if dataset=='synth_noised':
+        style = ':'
+    if dataset=='obs_GAIA':
+        style = '-'
+    if dataset=='obs_APOGEE':
+        style = ':'
+    
+    return style
+
 
 class StarPlotter():
     
@@ -60,20 +74,23 @@ class StarPlotter():
         batch_iters = np.linspace(cur_iter/len(losses['train_loss']), cur_iter, len(losses['train_loss']))
 
         # Plot training and validation progress
-        plt.plot(batch_iters, losses['train_loss'], label='Training', color='black', linewidth=2)
+        plt.plot(batch_iters, losses['train_loss'], label='Training', color='black', linewidth=4)
         ylim = 0
         for dataset in self.datasets:
-            plt.plot(batch_iters, losses['val_loss_'+dataset], color = getColor(dataset), label=pretty(dataset) + ' Validation')
+            plt.plot(batch_iters, losses['val_loss_'+dataset], color = getColor(dataset), label=pretty(dataset) + ' Validation', linestyle=getLinestyle(dataset))
             ylim = max(losses['val_loss_'+dataset][2], ylim)
 
         plt.xlim(batch_iters[0], batch_iters[-1])
         plt.ylim(0, 1.1*ylim)
-        plt.legend(fontsize=12)
+        plt.ylabel("Mean-squared-error loss")
+        plt.xlabel("Iteration")
+        # Move the legend to the right, outside the plot
+        plt.legend(fontsize=12, loc='upper left', bbox_to_anchor=(1.05, 1))
         plt.grid()
         plt.title("Training Progress")
         if self.SAVING:
             path = os.path.join(self.dir,"trainProgress.png")
-            plt.savefig(path)
+            plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
         plt.show()
 
     # Plot the isochrones
