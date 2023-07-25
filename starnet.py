@@ -2,9 +2,10 @@
 # Felix Wilton
 # 6/27/2023
 
-# TODO summary file, file naming convention, noise generation
+# TODO summary file, noise generation
 
 import os
+from datetime import date
 import numpy as np
 import h5py
 from collections import defaultdict
@@ -19,12 +20,14 @@ from star_logger import *
 from star_datasets import *
 
 ## MAIN PARAMETERS
+project_id = "Testing"
 batch_size = 16
 learning_rate = 0.001
 total_batch_iters = int(1e2)
 val_steps = 5
-output_dir = 'outputs/outs1'
+output_dir = 'outputs'
 data_dir = 'data'
+
 # Noise parameters
 ADD_NOISE = False
 mean = 0
@@ -35,14 +38,24 @@ label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'synth_noised', 'obs_GAIA', 'obs_APOGEE']
 TRAIN_DATASET_SELECT = 0
 
+project_name = f"{date.today().year}.{date.today().month}.{date.today().day}_{project_id}_0"
+# Check if the folder already exists and increment the number if needed
+count = 1
+while os.path.exists(os.path.join('outputs', project_name)):
+    project_name = f"{date.today().year}.{date.today().month}.{date.today().day}_{project_id}_{count}"
+    count += 1
+output_dir = os.path.join(output_dir, project_name)
+os.makedirs(output_dir)
 
 logger = StarLogger(output_dir)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 logger.log('Using Torch version: %s' % (torch.__version__))
 logger.log('Using a %s device\n' % (device))
+logger.log(f"Folder created: {output_dir}")
 
 # Record model parameters
 params = {
+    'project_id': project_id,
     'batch_size': batch_size,
     'learning_rate': learning_rate,
     'total_batch_iters': total_batch_iters,
