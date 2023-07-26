@@ -1,8 +1,8 @@
 import time
 from star_logger import StarLogger
 
-output_dir = 'outs1'
-logger = StarLogger(output_dir)
+logger = StarLogger("test/")
 
+logger.log("Sleep for 3 seconds")
 time.sleep(3)
 logger.log("Done")
