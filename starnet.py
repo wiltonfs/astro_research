@@ -102,6 +102,8 @@ for dataset in datasets:
     logger.log("Created validation dataset for " + dataset + " with size " + str(len(val_datasets[dataset])))
 
 logger.log('The training set consists of %i spectra.' % (len(train_dataset)))
+epochs = (total_batch_iters*batch_size) / len(train_dataset)
+logger.log(f'At {total_batch_iters} iterations, with {batch_size} samples per batch, this model will "see" {epochs:.2f} epochs')
 
 
 
@@ -119,51 +121,83 @@ logger.log('Started Training...')
 
 # Start timer
 train_start_time = time.time()
-iter_start_time = time.time()
+iters_start_time = time.time()
 val_start_time = time.time()
 save_start_time = time.time()
 
 # Continuously loop over the training set
 while cur_iter < (total_batch_iters):
     for train_batch in train_dataloader:
+
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"Started iteration {cur_iter}")
+
         # Add noise to train_batch
         if (ADD_NOISE == True):
             train_batch['spectrum'] += torch.randn_like(train_batch['spectrum']) * std + mean
         
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tAdded noise")
+
         # Set parameters to trainable
         model.train()
+
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tSet paramaters to trainable")
         
         # Switch to GPU if available
         train_batch = batch_to_device(train_batch, device)
 
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tTried to switch to GPU")
+
         # Zero the parameter gradients
         optimizer.zero_grad()
 
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tZero_grad")
+
         # Forward propagation
-        label_preds = model(train_batch['spectrum'], 
-                            norm_in=True, 
-                            denorm_out=False)
+        label_preds = model(train_batch['spectrum'], norm_in=True, denorm_out=False)
+        
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tForward propagation")
         
         # Compute mean-squared-error loss between predictions and normalized targets
         loss = torch.nn.MSELoss()(label_preds, model.normalize(train_batch['labels'], model.labels_mean, model.labels_std))
         
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tCalc loss")
+
         # Back-propagation
         loss.backward()
+
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tBack prop")
         
         # Weight updates
         optimizer.step()
+
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tWeights update")
         
         # Save losses to find average later
         running_loss.append(float(loss))
+
+        if (cur_iter < 3): #Print out the first few iterations
+            logger.log(f"\tSave losses")
         
         cur_iter += 1
         
         # Display progress
         if cur_iter % verbose_iters == 0:
+            logger.log('[Iter %i, %0.0f%%]' % (cur_iter, cur_iter/total_batch_iters*100))
             val_start_time = time.time()
             # Take average of training losses
             train_loss = np.nanmean(running_loss)
             losses['train_loss'].append(train_loss)
+            logger.log('\tTrain Loss: %0.4f' % (train_loss))
+            logger.log('\tTrain time taken: %0.0f seconds' % (val_start_time - iters_start_time))
 
             # Set parameters to not trainable
             model.eval()
@@ -198,7 +232,9 @@ while cur_iter < (total_batch_iters):
             running_loss = []
 
             val_loss = losses['val_loss_'+datasets[TRAIN_DATASET_SELECT]][-1]
-            
+            logger.log('\tVal Loss: %0.4f' % (val_loss))
+            logger.log('\tValidation time taken: %0.0f seconds' % (time.time() - val_start_time))
+
             save_start_time = time.time()
 
             # Save model
@@ -209,15 +245,10 @@ while cur_iter < (total_batch_iters):
                         'train_time' : time.time() - train_start_time},
                        model_filename)
             
-            # log progress
-            logger.log('[Iter %i, %0.0f%%]' % (cur_iter, cur_iter/total_batch_iters*100))
-            logger.log('\tTrain Loss: %0.4f' % (train_loss))
-            logger.log('\tVal Loss: %0.4f' % (val_loss))
-            logger.log('\tTrain time taken: %0.0f seconds' % (val_start_time - iter_start_time))
-            logger.log('\tValidation time taken: %0.0f seconds' % (save_start_time - val_start_time))
+            
             logger.log('\tSaving model time taken: %0.0f seconds' % (time.time() - save_start_time))
             
-            iter_start_time = time.time()
+            iters_start_time = time.time()
             
         if cur_iter >= total_batch_iters:
             # Save model
