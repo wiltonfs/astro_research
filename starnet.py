@@ -2,7 +2,7 @@
 # Felix Wilton
 # 6/27/2023
 
-# TODO summary file, noise generation
+# TODO summary file, noise generation, synth_noised
 
 import os
 from datetime import date
@@ -13,11 +13,10 @@ import time
 import torch
 
 
-
-from star_model import *
-from star_plotter import *
-from star_logger import *
-from star_datasets import *
+# I put these 4 scripts in a folder called utils
+from utils.star_model import *
+from utils.star_logger import *
+from utils.star_datasets import *
 
 ## MAIN PARAMETERS
 project_id = "Testing"
@@ -29,9 +28,8 @@ output_dir = 'outputs'
 data_dir = 'data'
 
 # Noise parameters
-ADD_NOISE = False
-mean = 0
-std = 0.03
+noise_mean = 0
+noise_std = 0.03
 
 
 label_keys = ['teff', 'feh', 'logg', 'alpha']
@@ -60,9 +58,8 @@ params = {
     'learning_rate': learning_rate,
     'total_batch_iters': total_batch_iters,
     'val_steps': val_steps,
-    'ADD_NOISE': ADD_NOISE,
-    'mean': mean,
-    'std': std,
+    'noise_mean': noise_mean,
+    'noise_std': noise_std,
     'label_keys': label_keys,
     'datasets': datasets,
     'TRAIN_DATASET_SELECT': TRAIN_DATASET_SELECT
@@ -133,8 +130,7 @@ while cur_iter < (total_batch_iters):
             logger.log(f"Started iteration {cur_iter}")
 
         # Add noise to train_batch
-        if (ADD_NOISE == True):
-            train_batch['spectrum'] += torch.randn_like(train_batch['spectrum']) * std + mean
+        train_batch['spectrum'] += torch.randn_like(train_batch['spectrum']) * noise_std + noise_mean
         
         if (cur_iter < 3): #Print out the first few iterations
             logger.log(f"\tAdded noise")
@@ -196,6 +192,7 @@ while cur_iter < (total_batch_iters):
             # Take average of training losses
             train_loss = np.nanmean(running_loss)
             losses['train_loss'].append(train_loss)
+            losses['iter'].append(cur_iter)
             logger.log('\tTrain Loss: %0.4f' % (train_loss))
             logger.log('\tTrain time taken: %0.0f seconds' % (val_start_time - iters_start_time))
 
@@ -208,9 +205,6 @@ while cur_iter < (total_batch_iters):
                     running_loss = []
 
                     for val_batch in val_dataloaders[dataset]:
-                        # Add noise to val_batch
-                        if (ADD_NOISE == True):
-                            val_batch['spectrum'] += torch.randn_like(val_batch['spectrum']) * std + mean
 
                         # Switch to GPU if available
                         val_batch = batch_to_device(val_batch, device)
@@ -258,14 +252,10 @@ while cur_iter < (total_batch_iters):
                         'losses' : losses,
                         'train_time' : time.time() - train_start_time},
                        model_filename)
+
             logger.log('Finished Training')
             logger.log('Total training time: %0.0f seconds' % (time.time() - train_start_time))
             break
-
-plotter = StarPlotter(output_dir, label_keys, datasets, saving=True)
-
-plotter.plot_train_progress(cur_iter, losses)
-logger.log("Plotted and saved progress")
 
 # Load model info
 if True == False:
@@ -300,9 +290,7 @@ with torch.no_grad():
             val_batch = batch_to_device(val_batch, device)
 
             # Forward propagation (and denormalize outputs)
-            label_preds = model(val_batch['spectrum'], 
-                                norm_in=True, 
-                                denorm_out=True)
+            label_preds = model(val_batch['spectrum'], norm_in=True, denorm_out=True)
 
             # Save batch data for comparisons
             ground_truth_labels[dataset].append(val_batch['labels'].cpu().data.numpy())
@@ -312,13 +300,14 @@ with torch.no_grad():
         model_pred_labels[dataset] = np.concatenate(model_pred_labels[dataset])
         logger.log("\tPredicted labels for " + dataset)
 
+# Save losses and predictions on 4 data sets
+with h5py.File(os.path.join(output_dir,'losses&predictions.h5'), 'w') as hf:
+    hf.create_dataset('losses', data=losses)
+    hf.create_dataset('ground truth labels', data=ground_truth_labels)
+    hf.create_dataset('predicted labels', data=model_pred_labels)
+    
+logger.log("Saved losses and validation predictions")
 
-
-
-plotter.plot_losses(model_pred_labels, ground_truth_labels)
-logger.log("Plotted and saved losses")
-plotter.plot_isochrones(model_pred_labels)
-logger.log("Plotted and saved isochrones")
 logger.log("Done!")
 
 logger.close()
