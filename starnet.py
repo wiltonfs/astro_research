@@ -21,6 +21,7 @@ from utils.star_datasets import *
 ## MAIN PARAMETERS
 project_id = "Testing"
 batch_size = 16
+val_batch_size = 1024
 learning_rate = 0.001
 total_batch_iters = int(1e2)
 val_steps = 5
@@ -89,7 +90,6 @@ train_dataset = SimpleSpectraDataset(train_data_file, 'train', label_keys)
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
 
 # Create the 4 validation datasets
-val_batch_size = 1024
 val_datasets = {}
 val_dataloaders = {}
 for dataset in datasets:
@@ -257,22 +257,6 @@ while cur_iter < (total_batch_iters):
             logger.log('Total training time: %0.0f seconds' % (time.time() - train_start_time))
             break
 
-# Load model info
-if True == False:
-    model_dir = ""
-    load_model = os.path.join(model_dir,'cnn_synth_clean_1.pth.tar')
-
-    checkpoint = torch.load(load_model, map_location=lambda storage, loc: storage)
-    losses = dict(checkpoint['losses'])
-    cur_iter = checkpoint['batch_iters']
-
-    # Load optimizer state
-    optimizer.load_state_dict(checkpoint['optimizer'])
-
-    # Load model weights
-    model.load_state_dict(checkpoint['model'])
-
-
 ## Try model on the 4 validation datasets
 model.eval() # Set parameters to not trainable
 ground_truth_labels = {}
@@ -301,11 +285,23 @@ with torch.no_grad():
         logger.log("\tPredicted labels for " + dataset)
 
 # Save losses and predictions on 4 data sets
-with h5py.File(os.path.join(output_dir,'losses&predictions.h5'), 'w') as hf:
-    hf.create_dataset('losses', data=losses)
-    hf.create_dataset('ground truth labels', data=ground_truth_labels)
-    hf.create_dataset('predicted labels', data=model_pred_labels)
-    
+with h5py.File(os.path.join(output_dir, 'losses_predictions.h5'), 'w') as hf:
+    # Save 'train_loss' and 'iter' datasets separately
+    hf.create_dataset('train_loss', data=np.array(losses['train_loss'], dtype=np.float32))
+    hf.create_dataset('iter', data=np.array(losses['iter'], dtype=np.int32))
+
+    # Save each 'val_loss_datasetX' separately
+    for dataset_idx, dataset in enumerate(datasets):
+        val_loss_key = f'val_loss_{dataset}'
+        hf.create_dataset(val_loss_key, data=np.array(losses[val_loss_key], dtype=np.float32))
+
+    # Save 'ground truth labels' and 'predicted labels' datasets separately for each dataset
+    for dataset in datasets:
+        gt_key = f'ground truth labels {dataset}'
+        pred_key = f'predicted labels {dataset}'
+        hf.create_dataset(gt_key, data=ground_truth_labels[dataset], dtype=np.float32)
+        hf.create_dataset(pred_key, data=model_pred_labels[dataset], dtype=np.float32)
+
 logger.log("Saved losses and validation predictions")
 
 logger.log("Done!")
