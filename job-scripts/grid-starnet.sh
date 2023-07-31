@@ -2,7 +2,7 @@
 #SBATCH --mem=1G
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=168:0:0
+#SBATCH --time=0:10:0
 #SBATCH --mail-user=wiltonfs@student.ubc.ca
 #SBATCH --mail-type=ALL
 
