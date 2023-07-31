@@ -12,4 +12,4 @@ module purge
 module load python scipy-stack
 source ~/astroPy/bin/activate
 
-python starnet.py --i 10000 --vs 25
+python starnet.py --i 100000 --vs 25 --ns 0
