@@ -48,7 +48,7 @@ output_dir = 'outputs'
 data_dir = 'data'
 
 label_keys = ['teff', 'feh', 'logg', 'alpha']
-datasets = ['synth_clean', 'synth_noised', 'obs_GAIA', 'obs_APOGEE']
+datasets = ['synth_clean', 'obs_GAIA', 'obs_APOGEE']
 TRAIN_DATASET_SELECT = 0
 
 project_name = f"{date.today().day}.{date.today().month}.{date.today().year}_{project_id}_"
@@ -102,7 +102,7 @@ with h5py.File(train_data_file, "r") as f:
 train_dataset = SimpleSpectraDataset(train_data_file, 'train', label_keys)
 train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
 
-# Create the 4 validation datasets
+# Create the validation datasets
 val_datasets = {}
 val_dataloaders = {}
 for dataset in datasets:
@@ -170,8 +170,29 @@ while cur_iter < (total_batch_iters):
 
             # Set parameters to not trainable
             model.eval()
-            
-            # Evaluate on validation set and display losses
+
+            # Evaluate on validation set with noise and display losses
+            with torch.no_grad():
+                running_loss = []
+                for val_batch in val_dataloaders[datasets[TRAIN_DATASET_SELECT]]:
+                    val_batch['spectrum'] += torch.randn_like(val_batch['spectrum']) * noise_std + noise_mean
+                    # Switch to GPU if available
+                    val_batch = batch_to_device(val_batch, device)
+                    # Forward propagation
+                    label_preds = model(val_batch['spectrum'], norm_in=True, denorm_out=False)
+                    # Compute mean-squared-error loss between predictions and normalized targets
+                    loss = torch.nn.MSELoss()(label_preds, model.normalize(val_batch['labels'], model.labels_mean, model.labels_std))
+                    # Save losses to find average later
+                    running_loss.append(float(loss))
+                # Average validation loss
+                val_loss = np.nanmean(running_loss)
+                losses['val_loss'].append(val_loss)  
+
+            logger.log('\tVal Loss: %0.4f' % (val_loss))
+            logger.log('\tValidation time taken: %0.0f seconds' % (time.time() - val_start_time))
+            eval_start_time = time.time()
+
+            # Evaluate on transfer learning evaluation sets and display losses
             with torch.no_grad():
                 for dataset in datasets:
                     running_loss = []
@@ -186,13 +207,10 @@ while cur_iter < (total_batch_iters):
                         running_loss.append(float(loss))
                     # Average validation loss
                     val_loss = np.nanmean(running_loss)
-                    losses['val_loss_'+dataset].append(val_loss)              
+                    losses['eval_loss_'+dataset].append(val_loss)              
             
             running_loss = []
-
-            val_loss = losses['val_loss_'+datasets[TRAIN_DATASET_SELECT]][-1]
-            logger.log('\tVal Loss: %0.4f' % (val_loss))
-            logger.log('\tValidation time taken: %0.0f seconds' % (time.time() - val_start_time))
+            logger.log('\tTransfer learning evaluation time taken: %0.0f seconds' % (time.time() - eval_start_time))
 
             save_start_time = time.time()
 
@@ -249,13 +267,14 @@ with torch.no_grad():
 
 # Save losses and predictions on 4 data sets
 with h5py.File(os.path.join(project_dir, 'losses_predictions.h5'), 'w') as hf:
-    # Save 'train_loss' and 'iter' datasets separately
+    # Save 'train_loss', 'val_loss', and 'iter' datasets separately
     hf.create_dataset('train_loss', data=np.array(losses['train_loss'], dtype=np.float32))
+    hf.create_dataset('val_loss', data=np.array(losses['val_loss'], dtype=np.float32))
     hf.create_dataset('iter', data=np.array(losses['iter'], dtype=np.int32))
 
     # Save each 'val_loss_datasetX' separately
     for dataset_idx, dataset in enumerate(datasets):
-        val_loss_key = f'val_loss_{dataset}'
+        val_loss_key = f'eval_loss_{dataset}'
         hf.create_dataset(val_loss_key, data=np.array(losses[val_loss_key], dtype=np.float32))
 
     # Save 'ground truth labels' and 'predicted labels' datasets separately for each dataset
@@ -265,7 +284,7 @@ with h5py.File(os.path.join(project_dir, 'losses_predictions.h5'), 'w') as hf:
         hf.create_dataset(gt_key, data=ground_truth_labels[dataset], dtype=np.float32)
         hf.create_dataset(pred_key, data=model_pred_labels[dataset], dtype=np.float32)
 
-logger.log("Saved losses and validation predictions")
+logger.log("Saved losses and evaluation predictions")
 
 # project id, iters, train time, batch size, learning rate, noise std, NUMBERS I CARE ABOUT: val_loss, val_loss_std, GAIA_loss, GAIA_loss_std, APOGEE_loss, APOGEE_loss_std
 results_dir = os.path.join(output_dir, 'results.csv')
@@ -273,7 +292,7 @@ if not os.path.exists(results_dir):
     os.makedirs(results_dir)
 
 file = open(results_dir, 'w')  # Open in append mode
-file.write(project_id, cur_iter, train_time, batch_size, learning_rate, noise_std)
+#file.write(project_id, cur_iter, train_time, batch_size, learning_rate, noise_std)
 file.flush()
 
 logger.log("Done!")
