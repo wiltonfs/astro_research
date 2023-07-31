@@ -1,6 +1,3 @@
-# I will call sbatch job-scripts/grid-starnet.sh
-
-# This is grid-starnet.sh
 #!/bin/bash
 #SBATCH --mem=1G
 #SBATCH --nodes=1
