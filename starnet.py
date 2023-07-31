@@ -2,7 +2,7 @@
 # Felix Wilton
 # 6/27/2023
 
-# TODO summary file, noise generation, synth_noised
+# TODO no more noise set + val set, std of loss, summary file
 
 import os
 from datetime import date
@@ -20,31 +20,32 @@ from utils.star_datasets import *
 # Function to parse command-line arguments
 def parse_arguments():
     parser = argparse.ArgumentParser(description='StarNet Hyperparameters')
+    parser.add_argument('--id', type=str, default='Simple', help='Project identifier')
     parser.add_argument('--bs', type=int, default=16, help='Batch size for training (default: 16)')
     parser.add_argument('--lr', type=float, default=0.001, help='Learning rate for training (default: 0.001)')
     parser.add_argument('--i', type=int, default=int(1e2), help='Training iterations (default: 100)')
     parser.add_argument('--vs', type=int, default=5, help='Validation steps during training (default: 5)')
+    parser.add_argument('--ns', type=float, default=0.03, help='STD of noise added to spectra (default: 0.03)')
     args = parser.parse_args()
     return args
 
 # Parse command-line arguments
 args = parse_arguments()
 
-
 ## MAIN PARAMETERS
-project_id = "Testing"
+project_id = args.id
 batch_size = args.bs
 learning_rate = args.lr
 total_batch_iters = args.i
 val_steps = args.vs
+# Noise parameters
+noise_std = args.ns
+noise_mean = 0
+
 
 val_batch_size = 1024
 output_dir = 'outputs'
 data_dir = 'data'
-
-# Noise parameters
-noise_mean = 0
-noise_std = 0.03
 
 label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'synth_noised', 'obs_GAIA', 'obs_APOGEE']
@@ -57,14 +58,14 @@ while os.path.exists(os.path.join('outputs', project_name + str(count))):
     count += 1
 project_name += str(count)
 
-output_dir = os.path.join(output_dir, project_name)
-os.makedirs(output_dir)
+project_dir = os.path.join(output_dir, project_name)
+os.makedirs(project_dir)
 
-logger = StarLogger(output_dir)
+logger = StarLogger(project_dir)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 logger.log('Using Torch version: %s' % (torch.__version__))
 logger.log('Using a %s device\n' % (device))
-logger.log(f"Folder created: {output_dir}")
+logger.log(f"Folder created: {project_dir}")
 
 # Record model parameters
 params = {
@@ -79,14 +80,14 @@ params = {
     'datasets': datasets,
     'TRAIN_DATASET_SELECT': TRAIN_DATASET_SELECT
 }
-output_file = os.path.join(output_dir, 'params.txt')
+output_file = os.path.join(project_dir, 'params.txt')
 with open(output_file, 'w') as paramFile:
     for key, value in params.items():
         paramFile.write(f"{key} = {value}\n")
 logger.log('Logged model parameters')
 
 train_data_file = os.path.join(data_dir, datasets[TRAIN_DATASET_SELECT] + '.h5')
-model_filename =  os.path.join(output_dir,'model.pth.tar')
+model_filename =  os.path.join(project_dir,'model.pth.tar')
 
 # Collect mean and std of the training data for normalization
 with h5py.File(train_data_file, "r") as f:
@@ -217,7 +218,8 @@ while cur_iter < (total_batch_iters):
                        model_filename)
 
             logger.log('Finished Training')
-            logger.log('Total training time: %0.0f seconds' % (time.time() - train_start_time))
+            train_time = time.time() - train_start_time
+            logger.log('Total training time: %0.0f seconds' % (train_time))
             break
 
 ## Try model on the 4 validation datasets
@@ -246,7 +248,7 @@ with torch.no_grad():
         logger.log("\tPredicted labels for " + dataset)
 
 # Save losses and predictions on 4 data sets
-with h5py.File(os.path.join(output_dir, 'losses_predictions.h5'), 'w') as hf:
+with h5py.File(os.path.join(project_dir, 'losses_predictions.h5'), 'w') as hf:
     # Save 'train_loss' and 'iter' datasets separately
     hf.create_dataset('train_loss', data=np.array(losses['train_loss'], dtype=np.float32))
     hf.create_dataset('iter', data=np.array(losses['iter'], dtype=np.int32))
@@ -264,6 +266,16 @@ with h5py.File(os.path.join(output_dir, 'losses_predictions.h5'), 'w') as hf:
         hf.create_dataset(pred_key, data=model_pred_labels[dataset], dtype=np.float32)
 
 logger.log("Saved losses and validation predictions")
+
+# project id, iters, train time, batch size, learning rate, noise std, NUMBERS I CARE ABOUT: val_loss, val_loss_std, GAIA_loss, GAIA_loss_std, APOGEE_loss, APOGEE_loss_std
+results_dir = os.path.join(output_dir, 'results.csv')
+if not os.path.exists(results_dir):
+    os.makedirs(results_dir)
+
+file = open(results_dir, 'w')  # Open in append mode
+file.write(project_id, cur_iter, train_time, batch_size, learning_rate, noise_std)
+file.flush()
+
 logger.log("Done!")
 logger.close()
 
