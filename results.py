@@ -26,9 +26,10 @@ plt.errorbar(x_positions, val_loss, yerr=val_loss_std, marker='o', linestyle='no
 
 plt.xlabel('Projects')
 plt.ylabel('Validation Loss')
-plt.title('Validation Loss for Each Project')
+plt.title(f'Validation Loss for Each Project in {grid_ID}')
 plt.xticks(range(len(sorted_data)), [row[0] for row in sorted_data], rotation=45, ha='right')  # Set project names on x-axis
 plt.tight_layout()  # To prevent label clipping
+plt.savefig(f'outputs/{grid_ID}_loss.png')
 plt.show()
 
 # Print the projects from grid_ID with the 3 lowest val_loss values
