@@ -37,4 +37,4 @@ plotter.plot_train_progress(losses)
 # TODO: Plot and save performance on eval sets (Not implemented in the provided code)
 
 # Plot and save isochrones
-#plotter.plot_isochrones(model_pred_labels)
+plotter.plot_isochrones(model_pred_labels)

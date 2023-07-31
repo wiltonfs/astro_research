@@ -104,13 +104,17 @@ class StarPlotter():
         fig = plt.figure(figsize=(15, 10))
         fig.suptitle('Isochrones', fontsize=16, fontweight='bold')
 
+        # Initialize vmin and vmax for consistent color scale across subplots
+        vmin = min(model_pred_labels[dataset][:, 1].min() for dataset in self.datasets)
+        vmax = max(model_pred_labels[dataset][:, 1].max() for dataset in self.datasets)
+
         # Iterate through the labels and create subplots
         for j, dataset in enumerate(self.datasets):
             # Create a subplot in the 2x2 grid
             ax = fig.add_subplot(2, 2, j+1)
 
-            scatter = ax.scatter(model_pred_labels[dataset][:,0], model_pred_labels[dataset][:,2], c=model_pred_labels[dataset][:,1], cmap='viridis', s=0.4)
-            
+            scatter = ax.scatter(model_pred_labels[dataset][:, 0], model_pred_labels[dataset][:, 2], c=model_pred_labels[dataset][:, 1], cmap='viridis', s=0.4, vmin=vmin, vmax=vmax)
+
             # Customize each subplot
             pretty_dataset = pretty(dataset)
             ax.set_title(pretty_dataset)
@@ -120,19 +124,19 @@ class StarPlotter():
             # Show colorbar
             cbar = plt.colorbar(scatter, ax=ax)
             cbar.set_label(pretty('feh'), rotation=90, labelpad=15)
-            
+
             ax.set_ylim(6, 0)
             ax.set_xlim(7000, 2500)
 
         # Adjust the spacing between subplots
         fig.tight_layout()
-        
 
         # Save the figure
         if self.SAVING:
-            path = os.path.join(self.dir,'isochrones.png')
+            path = os.path.join(self.dir, 'isochrones.png')
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
         plt.show()
+
 
     #Plot performance on Validation Sets
     def plot_losses(self, model_pred_labels, ground_truth_labels):
