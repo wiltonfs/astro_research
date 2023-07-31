@@ -2,11 +2,10 @@
 # Felix Wilton
 # 6/27/2023
 
-# TODO no more noise set + val set, std of loss, summary file
-
 import os
 from datetime import date
 import numpy as np
+import csv
 import h5py
 from collections import defaultdict
 import time
@@ -286,14 +285,40 @@ with h5py.File(os.path.join(project_dir, 'losses_predictions.h5'), 'w') as hf:
 
 logger.log("Saved losses and evaluation predictions")
 
-# project id, iters, train time, batch size, learning rate, noise std, NUMBERS I CARE ABOUT: val_loss, val_loss_std, GAIA_loss, GAIA_loss_std, APOGEE_loss, APOGEE_loss_std
 results_dir = os.path.join(output_dir, 'results.csv')
-if not os.path.exists(results_dir):
-    os.makedirs(results_dir)
+mode = 'a' if os.path.exists(results_dir) else 'w'
+field_names = ['project name', 'iters', 'epochs', 'train time (s)', 'batch size', 'learning rate', 'noise std',
+               'val_loss', 'val_loss_std', 'eval_loss_synth_clean', 'eval_std_synth_clean',
+               'eval_loss_obs_GAIA', 'eval_std_obs_GAIA', 'eval_loss_obs_APOGEE', 'eval_std_obs_APOGEE']
+# Open the CSV file in append mode or create a new one
+with open(results_dir, mode, newline='') as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames=field_names)
 
-#file = open(results_dir, 'w')  # Open in append mode
-#file.write(project_id, cur_iter, train_time, batch_size, learning_rate, noise_std)
-#file.flush()
+    # If it's a new file, write the header row
+    if mode == 'w':
+        writer.writeheader()
+
+    # Write a new row for the current experiment results
+    writer.writerow({
+        'project name': project_name,
+        'iters': cur_iter,
+        'epochs':epochs,
+        'train time (s)': round(train_time),
+        'batch size': batch_size,
+        'learning rate': learning_rate,
+        'noise std': noise_std,
+        'val_loss': losses['val_loss'][-1],
+        'val_loss_std': losses['val_std'][-1],
+        'eval_loss_synth_clean': losses['eval_loss_synth_clean'][-1],
+        'eval_std_synth_clean': losses['eval_std_synth_clean'][-1],
+        'eval_loss_obs_GAIA': losses['eval_loss_obs_GAIA'][-1],
+        'eval_std_obs_GAIA': losses['eval_std_obs_GAIA'][-1],
+        'eval_loss_obs_APOGEE': losses['eval_loss_obs_APOGEE'][-1],
+        'eval_std_obs_APOGEE': losses['eval_std_obs_APOGEE'][-1],
+    })
+
+print("Results have been saved to", results_dir)
+
 
 logger.log("Done!")
 logger.close()
