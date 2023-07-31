@@ -19,13 +19,13 @@ def pretty(label):
         label_fancy = r'[$\alpha$/H]'
         
     if label=='synth_clean':
-        label_fancy = 'Synthetic Data'
+        label_fancy = 'Synthetic'
     if label=='synth_noised':
-        label_fancy = 'Synthetic Data, Added Noise'
+        label_fancy = 'Synthetic, Added Noise'
     if label=='obs_GAIA':
-        label_fancy = 'Observed Data, GAIA Labels'
+        label_fancy = 'Observed, GAIA Labels'
     if label=='obs_APOGEE':
-        label_fancy = 'Observed Data, APOGEE Labels'
+        label_fancy = 'Observed, APOGEE Labels'
         
     return label_fancy
 
@@ -39,7 +39,7 @@ def getColor(dataset):
     if dataset=='obs_GAIA':
         color = 'forestgreen'
     if dataset=='obs_APOGEE':
-        color = 'forestgreen'
+        color = 'cornflowerblue'
     
     return color
 
@@ -67,21 +67,26 @@ class StarPlotter():
         self.SAVING = saving
     
     # Plot train and validation loss over the iterations
-    def plot_train_progress(self, cur_iter, losses):
+    def plot_train_progress(self, losses):
         plt.figure(figsize=(8,3))
 
-        # Determine iteration of checkpoint
-        batch_iters = np.linspace(cur_iter/len(losses['train_loss']), cur_iter, len(losses['train_loss']))
+        eval_alpha = 0.5
+        std_alpha = 0.2
 
         # Plot training and validation progress
-        plt.plot(batch_iters, losses['train_loss'], label='Training', color='black', linewidth=4)
+        plt.plot(losses['iter'], losses['train_loss'], label='Training', color='black', linewidth=4)
+        plt.fill_between(losses['iter'], losses['train_loss'] - losses['train_std'], losses['train_loss'] + losses['train_std'], color='black', alpha=std_alpha)
+        plt.plot(losses['iter'], losses['val_loss'], label='Validation', color='red')
+        plt.fill_between(losses['iter'], losses['val_loss'] - losses['val_std'], losses['val_loss'] + losses['val_std'], color='red', alpha=std_alpha)
+
         ylim = 0
         for dataset in self.datasets:
-            plt.plot(batch_iters, losses['val_loss_'+dataset], color = getColor(dataset), label=pretty(dataset) + ' Validation', linestyle=getLinestyle(dataset))
-            ylim = max(losses['val_loss_'+dataset][2], ylim)
+            plt.plot(losses['iter'], losses['eval_loss_' + dataset], color=getColor(dataset), label=pretty(dataset) + ' Evaluation', linestyle=getLinestyle(dataset), alpha=eval_alpha)
+            #plt.fill_between(losses['iter'], losses['eval_loss_' + dataset] - losses['eval_std_' + dataset], losses['eval_loss_' + dataset] + losses['eval_std_' + dataset], color=getColor(dataset), alpha=std_alpha)
+            ylim = max(losses['eval_loss_' + dataset][2], ylim)
 
-        plt.xlim(batch_iters[0], batch_iters[-1])
-        plt.ylim(0, 1.1*ylim)
+        plt.xlim(losses['iter'][0], losses['iter'][-1])
+        plt.ylim(0, 1.1 * ylim)
         plt.ylabel("Mean-squared-error loss")
         plt.xlabel("Iteration")
         # Move the legend to the right, outside the plot
@@ -89,7 +94,7 @@ class StarPlotter():
         plt.grid()
         plt.title("Training Progress")
         if self.SAVING:
-            path = os.path.join(self.dir,"trainProgress.png")
+            path = os.path.join(self.dir, "trainProgress.png")
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
         plt.show()
 
