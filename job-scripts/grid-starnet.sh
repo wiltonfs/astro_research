@@ -1,15 +1,28 @@
+# I will call sbatch job-scripts/grid-starnet.sh
+
+# This is grid-starnet.sh
 #!/bin/bash
-#SBATCH --mem=16G
+#SBATCH --mem=1G
 #SBATCH --nodes=1
-#SBATCH --gpus-per-node=1
-#SBATCH --ntasks-per-node=8
-#SBATCH --time=0:10:0
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=168:0:0
 #SBATCH --mail-user=wiltonfs@student.ubc.ca
 #SBATCH --mail-type=ALL
 
 cd $PROJECT/astro_research
-module purge
-module load python scipy-stack
-source ~/astroPy/bin/activate
 
-python starnet.py
+# I want to try the following combos:
+# --ns = [0, 0.3, 0.5]
+# --bs = [16, 128, 1024]
+# --lr = [0.0001, 0.001, 0.005]
+
+# Loop through the combinations and pass them to grid-sub-script.sh
+for ns_value in 0 0.3 0.5; do
+  for bs_value in 16 128 1024; do
+    for lr_value in 0.0001 0.001 0.005; do
+      sbatch job-scripts/grid-sub-script.sh $ns_value $bs_value $lr_value
+    done
+  done
+done
+
+
