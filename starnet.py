@@ -161,11 +161,14 @@ while cur_iter < (total_batch_iters):
         if cur_iter % verbose_iters == 0:
             logger.log('[Iter %i, %0.0f%%]' % (cur_iter, cur_iter/total_batch_iters*100))
             val_start_time = time.time()
-            # Take average of training losses
+            # Take average and std of training losses
             train_loss = np.nanmean(running_loss)
+            train_std = np.nanstd(running_loss)
             losses['train_loss'].append(train_loss)
+            losses['train_std'].append(train_std)
             losses['iter'].append(cur_iter)
-            logger.log('\tTrain Loss: %0.4f' % (train_loss))
+            std_perc = train_std / train_loss * 100
+            logger.log(f'\tTrain Loss: {train_loss:0.4f} +- {std_perc:0.2f}%')
             logger.log('\tTrain time taken: %0.0f seconds' % (val_start_time - iters_start_time))
 
             # Set parameters to not trainable
@@ -186,14 +189,16 @@ while cur_iter < (total_batch_iters):
                     running_loss.append(float(loss))
                 # Average validation loss
                 val_loss = np.nanmean(running_loss)
+                val_std = np.nanstd(running_loss)
                 losses['val_loss'].append(val_loss)  
+                losses['val_std'].append(val_std)  
+                std_perc = val_std / val_loss * 100
+                logger.log(f'\tVal Loss: {val_loss:0.4f} +- {std_perc:0.2f}%')
+                logger.log('\tValidation time taken: %0.0f seconds' % (time.time() - val_start_time))
 
-            logger.log('\tVal Loss: %0.4f' % (val_loss))
-            logger.log('\tValidation time taken: %0.0f seconds' % (time.time() - val_start_time))
-            eval_start_time = time.time()
+                eval_start_time = time.time()
 
-            # Evaluate on transfer learning evaluation sets and display losses
-            with torch.no_grad():
+                # Evaluate on transfer learning evaluation sets and display losses
                 for dataset in datasets:
                     running_loss = []
                     for val_batch in val_dataloaders[dataset]:
@@ -206,8 +211,10 @@ while cur_iter < (total_batch_iters):
                         # Save losses to find average later
                         running_loss.append(float(loss))
                     # Average validation loss
-                    val_loss = np.nanmean(running_loss)
-                    losses['eval_loss_'+dataset].append(val_loss)              
+                    eval_loss = np.nanmean(running_loss)
+                    eval_std = np.nanstd(running_loss)
+                    losses['eval_loss_'+dataset].append(eval_loss)         
+                    losses['eval_std_'+dataset].append(eval_std)      
             
             running_loss = []
             logger.log('\tTransfer learning evaluation time taken: %0.0f seconds' % (time.time() - eval_start_time))
@@ -267,16 +274,9 @@ with torch.no_grad():
 
 # Save losses and predictions on 4 data sets
 with h5py.File(os.path.join(project_dir, 'losses_predictions.h5'), 'w') as hf:
-    # Save 'train_loss', 'val_loss', and 'iter' datasets separately
-    hf.create_dataset('train_loss', data=np.array(losses['train_loss'], dtype=np.float32))
-    hf.create_dataset('val_loss', data=np.array(losses['val_loss'], dtype=np.float32))
-    hf.create_dataset('iter', data=np.array(losses['iter'], dtype=np.int32))
-
-    # Save each 'val_loss_datasetX' separately
-    for dataset_idx, dataset in enumerate(datasets):
-        val_loss_key = f'eval_loss_{dataset}'
-        hf.create_dataset(val_loss_key, data=np.array(losses[val_loss_key], dtype=np.float32))
-
+    # Save losses
+    for key in losses.keys():
+        hf.create_dataset(key, data=np.array(losses[key], dtype=np.float32))
     # Save 'ground truth labels' and 'predicted labels' datasets separately for each dataset
     for dataset in datasets:
         gt_key = f'ground truth labels {dataset}'
@@ -291,9 +291,9 @@ results_dir = os.path.join(output_dir, 'results.csv')
 if not os.path.exists(results_dir):
     os.makedirs(results_dir)
 
-file = open(results_dir, 'w')  # Open in append mode
+#file = open(results_dir, 'w')  # Open in append mode
 #file.write(project_id, cur_iter, train_time, batch_size, learning_rate, noise_std)
-file.flush()
+#file.flush()
 
 logger.log("Done!")
 logger.close()
