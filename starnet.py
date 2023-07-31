@@ -11,18 +11,34 @@ import h5py
 from collections import defaultdict
 import time
 import torch
+import argparse
 
 from utils.star_model import *
 from utils.star_logger import *
 from utils.star_datasets import *
 
+# Function to parse command-line arguments
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='StarNet Hyperparameters')
+    parser.add_argument('--bs', type=int, default=16, help='Batch size for training (default: 16)')
+    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate for training (default: 0.001)')
+    parser.add_argument('--i', type=int, default=int(1e2), help='Training iterations (default: 100)')
+    parser.add_argument('--vs', type=int, default=5, help='Validation steps during training (default: 5)')
+    args = parser.parse_args()
+    return args
+
+# Parse command-line arguments
+args = parse_arguments()
+
+
 ## MAIN PARAMETERS
 project_id = "Testing"
-batch_size = 16
+batch_size = args.bs
+learning_rate = args.lr
+total_batch_iters = args.i
+val_steps = args.vs
+
 val_batch_size = 1024
-learning_rate = 0.001
-total_batch_iters = int(1e2)
-val_steps = 5
 output_dir = 'outputs'
 data_dir = 'data'
 
@@ -248,9 +264,7 @@ with h5py.File(os.path.join(output_dir, 'losses_predictions.h5'), 'w') as hf:
         hf.create_dataset(pred_key, data=model_pred_labels[dataset], dtype=np.float32)
 
 logger.log("Saved losses and validation predictions")
-
 logger.log("Done!")
-
 logger.close()
 
 
