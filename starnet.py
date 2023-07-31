@@ -12,8 +12,6 @@ from collections import defaultdict
 import time
 import torch
 
-
-# I put these 4 scripts in a folder called utils
 from utils.star_model import *
 from utils.star_logger import *
 from utils.star_datasets import *
@@ -32,17 +30,17 @@ data_dir = 'data'
 noise_mean = 0
 noise_std = 0.03
 
-
 label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'synth_noised', 'obs_GAIA', 'obs_APOGEE']
 TRAIN_DATASET_SELECT = 0
 
-project_name = f"{date.today().year}.{date.today().month}.{date.today().day}_{project_id}_0"
+project_name = f"{date.today().day}.{date.today().month}.{date.today().year}_{project_id}_"
 # Check if the folder already exists and increment the number if needed
-count = 1
-while os.path.exists(os.path.join('outputs', project_name)):
-    project_name = f"{date.today().year}.{date.today().month}.{date.today().day}_{project_id}_{count}"
+count = 0
+while os.path.exists(os.path.join('outputs', project_name + str(count))):
     count += 1
+project_name += str(count)
+
 output_dir = os.path.join(output_dir, project_name)
 os.makedirs(output_dir)
 
@@ -78,10 +76,8 @@ model_filename =  os.path.join(output_dir,'model.pth.tar')
 with h5py.File(train_data_file, "r") as f:
     labels_mean = [np.nanmean(f[k + ' train'][:]) for k in label_keys]
     labels_std = [np.nanstd(f[k + ' train'][:]) for k in label_keys]
-    spectra_mean = np.nanmean(f['spectra train'][:]) 
-    spectra_std = np.nanstd(f['spectra train'][:])
-
-
+    spectra_mean = np.nanmean(f['spectra train'][:]) + noise_mean
+    spectra_std = np.nanstd(f['spectra train'][:]) + noise_std
 
 ## DATASETS
 
@@ -102,15 +98,13 @@ logger.log('The training set consists of %i spectra.' % (len(train_dataset)))
 epochs = (total_batch_iters*batch_size) / len(train_dataset)
 logger.log(f'At {total_batch_iters} iterations, with {batch_size} samples per batch, this model will "see" {epochs:.2f} epochs')
 
-
-
 model = StarNet(label_keys, device, train_dataset, spectra_mean, spectra_std, labels_mean, labels_std)
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=0)
 
 ## TRAIN MODEL
 cur_iter = 0
-verbose_iters = total_batch_iters/val_steps
+verbose_iters = round(total_batch_iters/val_steps)
 losses = defaultdict(list)
 running_loss = []
 
@@ -125,64 +119,25 @@ save_start_time = time.time()
 # Continuously loop over the training set
 while cur_iter < (total_batch_iters):
     for train_batch in train_dataloader:
-
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"Started iteration {cur_iter}")
-
         # Add noise to train_batch
         train_batch['spectrum'] += torch.randn_like(train_batch['spectrum']) * noise_std + noise_mean
-        
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tAdded noise")
-
-        # Set parameters to trainable
+         # Set parameters to trainable
         model.train()
-
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tSet paramaters to trainable")
-        
         # Switch to GPU if available
         train_batch = batch_to_device(train_batch, device)
-
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tTried to switch to GPU")
-
         # Zero the parameter gradients
         optimizer.zero_grad()
-
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tZero_grad")
-
         # Forward propagation
         label_preds = model(train_batch['spectrum'], norm_in=True, denorm_out=False)
-        
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tForward propagation")
-        
         # Compute mean-squared-error loss between predictions and normalized targets
         loss = torch.nn.MSELoss()(label_preds, model.normalize(train_batch['labels'], model.labels_mean, model.labels_std))
-        
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tCalc loss")
-
         # Back-propagation
         loss.backward()
-
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tBack prop")
-        
         # Weight updates
         optimizer.step()
-
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tWeights update")
-        
         # Save losses to find average later
         running_loss.append(float(loss))
 
-        if (cur_iter < 3): #Print out the first few iterations
-            logger.log(f"\tSave losses")
-        
         cur_iter += 1
         
         # Display progress
@@ -203,25 +158,18 @@ while cur_iter < (total_batch_iters):
             with torch.no_grad():
                 for dataset in datasets:
                     running_loss = []
-
                     for val_batch in val_dataloaders[dataset]:
-
                         # Switch to GPU if available
                         val_batch = batch_to_device(val_batch, device)
-
                         # Forward propagation
                         label_preds = model(val_batch['spectrum'], norm_in=True, denorm_out=False)
-
                         # Compute mean-squared-error loss between predictions and normalized targets
                         loss = torch.nn.MSELoss()(label_preds, model.normalize(val_batch['labels'], model.labels_mean, model.labels_std))
-
                         # Save losses to find average later
                         running_loss.append(float(loss))
-
                     # Average validation loss
                     val_loss = np.nanmean(running_loss)
-                    losses['val_loss_'+dataset].append(val_loss)
-                    
+                    losses['val_loss_'+dataset].append(val_loss)              
             
             running_loss = []
 
@@ -238,7 +186,6 @@ while cur_iter < (total_batch_iters):
                         'losses' : losses,
                         'train_time' : time.time() - train_start_time},
                        model_filename)
-            
             
             logger.log('\tSaving model time taken: %0.0f seconds' % (time.time() - save_start_time))
             
@@ -272,10 +219,8 @@ with torch.no_grad():
         for val_batch in current_dataloader:
             # Switch to GPU if available
             val_batch = batch_to_device(val_batch, device)
-
             # Forward propagation (and denormalize outputs)
             label_preds = model(val_batch['spectrum'], norm_in=True, denorm_out=True)
-
             # Save batch data for comparisons
             ground_truth_labels[dataset].append(val_batch['labels'].cpu().data.numpy())
             model_pred_labels[dataset].append(label_preds.cpu().data.numpy())
