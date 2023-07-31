@@ -34,7 +34,7 @@ with h5py.File(os.path.join(proj_dir, 'losses_predictions.h5'), 'r') as hf:
 # Plot and save plot_train_progress
 plotter.plot_train_progress(losses)
 
-# TODO: Plot and save performance on eval sets (Not implemented in the provided code)
+# TODO: Plot and save performance on eval sets
 
 # Plot and save isochrones
 plotter.plot_isochrones(model_pred_labels)

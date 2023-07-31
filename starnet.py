@@ -317,7 +317,7 @@ with open(results_dir, mode, newline='') as csvfile:
         'eval_std_obs_APOGEE': losses['eval_std_obs_APOGEE'][-1],
     })
 
-print("Results have been saved to", results_dir)
+logger.log("Results have been saved to", results_dir)
 
 
 logger.log("Done!")
