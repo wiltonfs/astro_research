@@ -1,3 +1,7 @@
+# # Plot and Analyze Grid Search Results
+# Felix Wilton
+# 7/31/2023
+
 import csv
 import matplotlib.pyplot as plt
 
@@ -35,6 +39,7 @@ plt.show()
 # Print the projects from grid_ID with the 3 lowest val_loss values
 print(f"Projects from {grid_ID} with the 3 lowest val_loss:")
 for i in range(3):
+    i = -1*(i+1)
     project_name = sorted_data[i][0]
     val_loss = float(sorted_data[i][7])
     print(f"{project_name}: {val_loss:.5f}")
