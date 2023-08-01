@@ -139,9 +139,86 @@ class StarPlotter():
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
         plt.show()
 
+    #Plot performance on evaluation sets
+    def plot_violin_loss(self, model_pred_labels, ground_truth_labels):
+        y_lims = [1000, 1, 1, 1, 10]
 
-    #Plot performance on Validation Sets
-    def plot_losses(self, model_pred_labels, ground_truth_labels):
+        fig, axes = plt.subplots(len(self.label_keys), 1, figsize=(12, len(self.label_keys)*2.7))
+        bbox_props = dict(boxstyle="square,pad=0.3", fc="w", ec="k", lw=1)
+        pred_stellar_labels = model_pred_labels['synth_clean']
+        tgt_stellar_labels = ground_truth_labels['synth_clean']
+
+        # Iterate through labels
+        for i, ax in enumerate(axes):
+            label_key = pretty(self.label_keys[i])
+                
+            # Calculate residual
+            diff = pred_stellar_labels[:,i] - tgt_stellar_labels[:,i]
+                
+            # Determine boxplot info
+            box_positions = []
+            box_data = []
+            for tgt_val in np.unique(tgt_stellar_labels[:,i]):
+                indices = np.where(tgt_stellar_labels[:,i]==tgt_val)[0]
+                if len(indices)>2:
+                    box_positions.append(tgt_val)
+                    box_data.append(diff[indices])
+            box_width = np.mean(np.diff(box_positions))/2
+
+            # Plot
+            ax.violinplot(box_data, positions=box_positions, widths=box_width,
+                        showextrema=True, showmeans=False)
+            
+            # Annotate median and standard deviation of residuals
+            if 'eff' in label_key:
+                ax.annotate('$\widetilde{m}$=%0.0f $s$=%0.0f'% (np.median(diff), np.std(diff)),
+                            (0.75,0.8), size=4*len(self.label_keys), xycoords='axes fraction', 
+                            bbox=bbox_props)
+            elif 'rad' in label_key:
+                ax.annotate('$\widetilde{m}$=%0.1f $s$=%0.1f'% (np.median(diff), np.std(diff)),
+                            (0.75,0.8), size=4*len(self.label_keys), xycoords='axes fraction', 
+                            bbox=bbox_props)
+            else:
+                ax.annotate('$\widetilde{m}$=%0.2f $s$=%0.2f'% (np.median(diff), np.std(diff)),
+                        (0.75,0.8), size=4*len(self.label_keys), xycoords='axes fraction', 
+                        bbox=bbox_props)
+                
+            # Axes parameters
+            ax.set_xlabel('%s' % (label_key), size=4*len(self.label_keys))
+            ax.set_ylabel(r'$\Delta$ %s' % label_key, size=4*len(self.label_keys))
+            ax.axhline(0, linewidth=2, c='black', linestyle='--')
+            ax.set_ylim(-y_lims[i], y_lims[i])
+            ax.set_xlim(np.min(box_positions)-box_width*2, np.max(box_positions)+box_width*2)
+            ax.set_yticks([-y_lims[i], -0.5*y_lims[i], 0, 0.5*y_lims[i], y_lims[i]])
+            
+            # Annotate sample size of each bin
+            ax.text(box_positions[0]-2*box_width, 1.11*y_lims[i], 'n = ',
+                fontsize=3*len(self.label_keys))
+            ax_t = ax.secondary_xaxis('top')
+            ax_t.set_xticks(box_positions)
+            ax_t.set_xticklabels([len(d) for d in box_data])
+            ax_t.tick_params(axis='x', direction='in', labelsize=3*len(self.label_keys))
+
+            # Set Teff values to integers
+            if 'eff' in label_key:
+                tick_positions = ax.get_xticks()
+                ax.set_xticks(tick_positions)
+                ax.set_xticklabels(np.array(tick_positions).astype(int))
+
+            ax.tick_params(labelsize=3*len(self.label_keys))
+            ax.grid()
+        
+        plt.tight_layout()
+        plt.subplots_adjust(hspace=.5)
+
+        # Save the figure
+        if self.SAVING:
+            path = os.path.join(self.dir,'violin.png')
+            plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
+        plt.show()
+
+    #Plot performance on evaluation sets
+    def plot_scatter_losses(self, model_pred_labels, ground_truth_labels):
         y_lims = [1000, 1.2, 1.5, 0.8]
         x_lims = [[2000, 9000],
                 [-5.1, 1.1],

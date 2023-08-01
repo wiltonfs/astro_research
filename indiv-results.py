@@ -5,7 +5,7 @@ from utils.star_plotter import *
 import h5py
 import os
 
-project = '31.7.2023_Grid_27'
+project = '31.7.2023_Grid_34'
 
 label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'obs_GAIA', 'obs_APOGEE']
@@ -34,7 +34,11 @@ with h5py.File(os.path.join(proj_dir, 'losses_predictions.h5'), 'r') as hf:
 # Plot and save plot_train_progress
 plotter.plot_train_progress(losses, std=False)
 
-# TODO: Plot and save performance on eval sets
+# Plot and save violin plots on synthetic eval sets
+plotter.plot_violin_loss(model_pred_labels, ground_truth_labels)
+
+# Plot and save performance on all eval sets
+plotter.plot_scatter_losses(model_pred_labels, ground_truth_labels)
 
 # Plot and save isochrones
 plotter.plot_isochrones(model_pred_labels)
