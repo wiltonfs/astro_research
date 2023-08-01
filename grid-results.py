@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 grid_ID = 'Grid'
 
 data = []
-with open('outputs/results.csv', 'r') as csvfile:
+with open('outputs/GridSearch2.csv', 'r') as csvfile:
     csvreader = csv.reader(csvfile)
     header = next(csvreader)
     for row in csvreader:

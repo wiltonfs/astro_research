@@ -5,7 +5,7 @@ from utils.star_plotter import *
 import h5py
 import os
 
-project = '31.7.2023_Simple_0'
+project = '31.7.2023_Grid_27'
 
 label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'obs_GAIA', 'obs_APOGEE']
@@ -32,7 +32,7 @@ with h5py.File(os.path.join(proj_dir, 'losses_predictions.h5'), 'r') as hf:
         model_pred_labels[dataset] = np.array(hf[pred_key], dtype=np.float32)
 
 # Plot and save plot_train_progress
-plotter.plot_train_progress(losses)
+plotter.plot_train_progress(losses, std=False)
 
 # TODO: Plot and save performance on eval sets
 

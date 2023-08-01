@@ -67,7 +67,7 @@ class StarPlotter():
         self.SAVING = saving
     
     # Plot train and validation loss over the iterations
-    def plot_train_progress(self, losses):
+    def plot_train_progress(self, losses, std=False):
         plt.figure(figsize=(8,3))
 
         eval_alpha = 0.5
@@ -75,9 +75,11 @@ class StarPlotter():
 
         # Plot training and validation progress
         plt.plot(losses['iter'], losses['train_loss'], label='Training', color='black', linewidth=4)
-        plt.fill_between(losses['iter'], losses['train_loss'] - losses['train_std'], losses['train_loss'] + losses['train_std'], color='black', alpha=std_alpha)
         plt.plot(losses['iter'], losses['val_loss'], label='Validation', color='red')
-        plt.fill_between(losses['iter'], losses['val_loss'] - losses['val_std'], losses['val_loss'] + losses['val_std'], color='red', alpha=std_alpha)
+
+        if std:
+            plt.fill_between(losses['iter'], losses['train_loss'] - losses['train_std'], losses['train_loss'] + losses['train_std'], color='black', alpha=std_alpha)
+            plt.fill_between(losses['iter'], losses['val_loss'] - losses['val_std'], losses['val_loss'] + losses['val_std'], color='red', alpha=std_alpha)
 
         ylim = 0
         for dataset in self.datasets:
