@@ -28,6 +28,7 @@ def parse_arguments():
     parser.add_argument('--i', type=int, default=int(1e2), help='Training iterations (default: 100)')
     parser.add_argument('--vs', type=int, default=5, help='Validation steps during training (default: 5)')
     parser.add_argument('--ns', type=float, default=0.03, help='STD of noise added to spectra (default: 0.03)')
+    parser.add_argument('--tl', type=bool, default=False, help='If the model is evaluated on other datasets (Setting this to False will speed up runtime)')
     args = parser.parse_args()
     return args
 
@@ -41,6 +42,7 @@ initial_learning_rate = args.lrI
 final_learning_rate = args.lrF
 total_batch_iters = args.i
 val_steps = args.vs
+TRANSFER_LEARNING = args.tl
 # Noise parameters
 noise_std = args.ns
 noise_mean = 0
@@ -78,6 +80,7 @@ params = {
     'final_learning_rate': final_learning_rate,
     'total_batch_iters': total_batch_iters,
     'val_steps': val_steps,
+    'TRANSFER_LEARNING': TRANSFER_LEARNING,
     'noise_mean': noise_mean,
     'noise_std': noise_std,
     'label_keys': label_keys,
@@ -209,25 +212,27 @@ while cur_iter < (total_batch_iters):
                 eval_start_time = time.time()
 
                 # Evaluate on transfer learning evaluation sets and display losses
-                for dataset in datasets:
-                    running_loss = []
-                    for val_batch in val_dataloaders[dataset]:
-                        # Switch to GPU if available
-                        val_batch = batch_to_device(val_batch, device)
-                        # Forward propagation
-                        label_preds = model(val_batch['spectrum'], norm_in=True, denorm_out=False)
-                        # Compute mean-squared-error loss between predictions and normalized targets
-                        loss = torch.nn.MSELoss()(label_preds, model.normalize(val_batch['labels'], model.labels_mean, model.labels_std))
-                        # Save losses to find average later
-                        running_loss.append(float(loss))
-                    # Average validation loss
-                    eval_loss = np.nanmean(running_loss)
-                    eval_std = np.nanstd(running_loss)
-                    losses['eval_loss_'+dataset].append(eval_loss)         
-                    losses['eval_std_'+dataset].append(eval_std)      
+                if TRANSFER_LEARNING:
+                    for dataset in datasets:
+                        running_loss = []
+                        for val_batch in val_dataloaders[dataset]:
+                            # Switch to GPU if available
+                            val_batch = batch_to_device(val_batch, device)
+                            # Forward propagation
+                            label_preds = model(val_batch['spectrum'], norm_in=True, denorm_out=False)
+                            # Compute mean-squared-error loss between predictions and normalized targets
+                            loss = torch.nn.MSELoss()(label_preds, model.normalize(val_batch['labels'], model.labels_mean, model.labels_std))
+                            # Save losses to find average later
+                            running_loss.append(float(loss))
+                        # Average validation loss
+                        eval_loss = np.nanmean(running_loss)
+                        eval_std = np.nanstd(running_loss)
+                        losses['eval_loss_'+dataset].append(eval_loss)         
+                        losses['eval_std_'+dataset].append(eval_std)
+                    logger.log('\tTransfer learning evaluation time taken: %0.0f seconds' % (time.time() - eval_start_time))  
             
             running_loss = []
-            logger.log('\tTransfer learning evaluation time taken: %0.0f seconds' % (time.time() - eval_start_time))
+            
 
             save_start_time = time.time()
 
@@ -296,9 +301,10 @@ with h5py.File(os.path.join(project_dir, 'losses_predictions.h5'), 'w') as hf:
 
 logger.log("Saved losses and evaluation predictions")
 
+# Save results to results file
 results_dir = os.path.join(output_dir, 'results.csv')
 mode = 'a' if os.path.exists(results_dir) else 'w'
-field_names = ['project name', 'iters', 'epochs', 'train time (s)', 'batch size', 'learning rate', 'noise std',
+field_names = ['project name', 'iters', 'epochs', 'train time (s)', 'batch size', 'initial learning rate', 'final learning rate', 'noise std',
                'val_loss', 'val_loss_std', 'eval_loss_synth_clean', 'eval_std_synth_clean',
                'eval_loss_obs_GAIA', 'eval_std_obs_GAIA', 'eval_loss_obs_APOGEE', 'eval_std_obs_APOGEE']
 # Open the CSV file in append mode or create a new one
@@ -310,25 +316,40 @@ with open(results_dir, mode, newline='') as csvfile:
         writer.writeheader()
 
     # Write a new row for the current experiment results
-    writer.writerow({
+    result_row = {
         'project name': project_name,
         'iters': cur_iter,
         'epochs':epochs,
         'train time (s)': round(train_time),
         'batch size': batch_size,
-        'learning rate': learning_rate,
+        'initial learning rate': initial_learning_rate,
+        'final learning rate': final_learning_rate,
         'noise std': noise_std,
         'val_loss': losses['val_loss'][-1],
         'val_loss_std': losses['val_std'][-1],
-        'eval_loss_synth_clean': losses['eval_loss_synth_clean'][-1],
-        'eval_std_synth_clean': losses['eval_std_synth_clean'][-1],
-        'eval_loss_obs_GAIA': losses['eval_loss_obs_GAIA'][-1],
-        'eval_std_obs_GAIA': losses['eval_std_obs_GAIA'][-1],
-        'eval_loss_obs_APOGEE': losses['eval_loss_obs_APOGEE'][-1],
-        'eval_std_obs_APOGEE': losses['eval_std_obs_APOGEE'][-1],
-    })
+    }
 
-logger.log("Results have been saved to", results_dir)
+    # Conditionally add transfer learning evaluation results if TRANSFER_LEARNING is True
+    if TRANSFER_LEARNING:
+        result_row['eval_loss_synth_clean'] = losses['eval_loss_synth_clean'][-1]
+        result_row['eval_std_synth_clean'] = losses['eval_std_synth_clean'][-1]
+        result_row['eval_loss_obs_GAIA'] = losses['eval_loss_obs_GAIA'][-1]
+        result_row['eval_std_obs_GAIA'] = losses['eval_std_obs_GAIA'][-1]
+        result_row['eval_loss_obs_APOGEE'] = losses['eval_loss_obs_APOGEE'][-1]
+        result_row['eval_std_obs_APOGEE'] = losses['eval_std_obs_APOGEE'][-1]
+    else:
+        result_row['eval_loss_synth_clean'] = 'N/A'
+        result_row['eval_std_synth_clean'] = 'N/A'
+        result_row['eval_loss_obs_GAIA'] = 'N/A'
+        result_row['eval_std_obs_GAIA'] = 'N/A'
+        result_row['eval_loss_obs_APOGEE'] = 'N/A'
+        result_row['eval_std_obs_APOGEE'] = 'N/A'
+
+    # Write the row to the CSV file
+    writer.writerow(result_row)
+
+
+logger.log("Results have been saved to " + results_dir)
 
 
 logger.log("Done!")
