@@ -13,6 +13,6 @@ module load python scipy-stack
 source ~/astroPy/bin/activate
 
 # Train model
-model_name=$(python starnet.py --i 100000 --vs 25 --ns 0)
+project_name=$(python starnet.py --i 100000 --vs 25 --ns 0)
 # Generate visualizations
-python indiv-results.py --p "$model_name"
+python indiv-results.py --p "$project_name"

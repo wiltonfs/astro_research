@@ -352,5 +352,8 @@ logger.log("Results have been saved to " + results_dir)
 logger.log("Done!")
 logger.close()
 
+#Print project name as the output of the script
+print(project_name)
+
 
 
