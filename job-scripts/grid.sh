@@ -9,16 +9,13 @@
 cd $PROJECT/astro_research
 
 # I want to try the following combos:
-# --ns = [0, 0.3, 0.5]
 # --bs = [16, 128, 1024]
-# --lr = [0.0001, 0.001, 0.005]
+# --i =  [25, 200, 1600]
 
 # Loop through the combinations and pass them to grid-sub-script.sh
-for ns_value in 0 0.3 0.5; do
-  for bs_value in 16 128 1024; do
-    for lr_value in 0.0001 0.001 0.005; do
-      sbatch job-scripts/grid-sub-script.sh $ns_value $bs_value $lr_value
-    done
+for bs_value in 16 128 1024; do
+  for i_value in 25 200 1600; do
+    sbatch job-scripts/sub-grid-script.sh $bs_value $i_value
   done
 done
 
