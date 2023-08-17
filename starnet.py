@@ -10,18 +10,21 @@ import h5py
 from collections import defaultdict
 import time
 import torch
+from torch.optim.lr_scheduler import StepLR
 import argparse
 
 from utils.star_model import *
 from utils.star_logger import *
 from utils.star_datasets import *
-
+# id_bs_lr_i_vs_ns
+# id_bs_lr_i_vs_ns
 # Function to parse command-line arguments
 def parse_arguments():
     parser = argparse.ArgumentParser(description='StarNet Hyperparameters')
     parser.add_argument('--id', type=str, default='Simple', help='Project identifier')
     parser.add_argument('--bs', type=int, default=16, help='Batch size for training (default: 16)')
-    parser.add_argument('--lr', type=float, default=0.001, help='Learning rate for training (default: 0.001)')
+    parser.add_argument('--lrI', type=float, default=0.01, help='Initial Learning rate for training (default: 0.01)')
+    parser.add_argument('--lrF', type=float, default=0.0005, help='Final Learning rate for training. Learning rate approaches this through a geometric decay (default: 0.0005)')
     parser.add_argument('--i', type=int, default=int(1e2), help='Training iterations (default: 100)')
     parser.add_argument('--vs', type=int, default=5, help='Validation steps during training (default: 5)')
     parser.add_argument('--ns', type=float, default=0.03, help='STD of noise added to spectra (default: 0.03)')
@@ -34,7 +37,8 @@ args = parse_arguments()
 ## MAIN PARAMETERS
 project_id = args.id
 batch_size = args.bs
-learning_rate = args.lr
+initial_learning_rate = args.lrI
+final_learning_rate = args.lrF
 total_batch_iters = args.i
 val_steps = args.vs
 # Noise parameters
@@ -70,7 +74,8 @@ logger.log(f"Folder created: {project_dir}")
 params = {
     'project_id': project_id,
     'batch_size': batch_size,
-    'learning_rate': learning_rate,
+    'initial_learning_rate': initial_learning_rate,
+    'final_learning_rate': final_learning_rate,
     'total_batch_iters': total_batch_iters,
     'val_steps': val_steps,
     'noise_mean': noise_mean,
@@ -116,7 +121,12 @@ logger.log(f'At {total_batch_iters} iterations, with {batch_size} samples per ba
 
 model = StarNet(label_keys, device, train_dataset, spectra_mean, spectra_std, labels_mean, labels_std)
 model = model.to(device)
-optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=0)
+optimizer = torch.optim.Adam(model.parameters(), initial_learning_rate, weight_decay=0)
+
+# Calculate the learning rate schedule
+lr_factor = (final_learning_rate / initial_learning_rate) ** (1.0 / total_batch_iters)
+scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: lr_factor ** epoch)
+
 
 ## TRAIN MODEL
 cur_iter = 0
@@ -151,6 +161,7 @@ while cur_iter < (total_batch_iters):
         loss.backward()
         # Weight updates
         optimizer.step()
+        scheduler.step()
         # Save losses to find average later
         running_loss.append(float(loss))
 

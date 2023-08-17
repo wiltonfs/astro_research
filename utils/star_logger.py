@@ -10,7 +10,8 @@ class StarLogger:
 
         self.file = open(os.path.join(logging_dir, 'log.txt'), 'w')  # Use 'w' mode to create or overwrite the log file
         self.start = time.time()
-        self.log('Created logger')
+        formatted_start_time = time.strftime("%Y/%m/%d at %I:%M %p", time.localtime(self.start))
+        self.log(f"Created logger on {formatted_start_time}")
 
 
     def log(self, msg):
