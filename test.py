@@ -1,8 +1,17 @@
-import time
-from star_logger import StarLogger
+import matplotlib.pyplot as plt
 
-logger = StarLogger("test/")
+# Create sample data
+x = [1, 2, 3, 4, 5]
+y = [10, 15, 7, 12, 9]
 
-logger.log("Sleep for 3 seconds")
-time.sleep(3)
-logger.log("Done")
+# Create a figure and axis
+fig, ax = plt.subplots()
+ax.plot(x, y, label='Data')
+ax.set_xlabel('X-axis')
+ax.set_ylabel('Y-axis')
+ax.set_title('Simple Matplotlib Example')
+ax.legend()
+
+# Save the figure to a specified path
+save_path = 'outputs/PlottingTestImage.png'
+plt.savefig(save_path)
