@@ -26,7 +26,7 @@ def parse_arguments():
     parser.add_argument('--i', type=int, default=int(1e2), help='Training iterations (default: 100)')
     parser.add_argument('--vs', type=int, default=5, help='Validation steps during training (default: 5)')
     parser.add_argument('--ns', type=float, default=0.03, help='STD of noise added to spectra (default: 0.03)')
-    parser.add_argument('--tl', type=bool, default=False, help='If the model is evaluated on other datasets (Setting this to False will speed up runtime)')
+    parser.add_argument('--tl', type=bool, default=True, help='If the model is evaluated on other datasets (Setting this to False will speed up runtime)')
     args = parser.parse_args()
     return args
 

@@ -4,8 +4,19 @@
 from utils.star_plotter import *
 import h5py
 import os
+import argparse
 
-project = '31.7.2023_Grid_34'
+# Function to parse command-line arguments
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Individual Results: Arguments')
+    parser.add_argument('--p', type=str, default='Simple_16_100_0.01_0.0005_5_0.03_True', help='Project path to generate results for')
+    args = parser.parse_args()
+    return args
+
+# Parse command-line arguments
+args = parse_arguments()
+
+project = args.p
 
 label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'obs_GAIA', 'obs_APOGEE']

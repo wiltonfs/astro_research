@@ -98,7 +98,6 @@ class StarPlotter():
         if self.SAVING:
             path = os.path.join(self.dir, "trainProgress.png")
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
-        plt.show()
 
     # Plot the isochrones
     def plot_isochrones(self, model_pred_labels):
@@ -137,7 +136,6 @@ class StarPlotter():
         if self.SAVING:
             path = os.path.join(self.dir, 'isochrones.png')
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
-        plt.show()
 
     #Plot performance on evaluation sets
     def plot_violin_loss(self, model_pred_labels, ground_truth_labels):
@@ -215,7 +213,6 @@ class StarPlotter():
         if self.SAVING:
             path = os.path.join(self.dir,'violin.png')
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
-        plt.show()
 
     #Plot performance on evaluation sets
     def plot_scatter_losses(self, model_pred_labels, ground_truth_labels):
@@ -274,7 +271,6 @@ class StarPlotter():
             if self.SAVING:
                 path = os.path.join(self.dir,label + '.png')
                 plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
-            plt.show()
 
 
 
