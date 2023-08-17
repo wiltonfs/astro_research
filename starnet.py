@@ -16,8 +16,6 @@ import argparse
 from utils.star_model import *
 from utils.star_logger import *
 from utils.star_datasets import *
-# id_bs_lr_i_vs_ns
-# id_bs_lr_i_vs_ns
 # Function to parse command-line arguments
 def parse_arguments():
     parser = argparse.ArgumentParser(description='StarNet Hyperparameters')
@@ -55,16 +53,15 @@ data_dir = 'data'
 label_keys = ['teff', 'feh', 'logg', 'alpha']
 datasets = ['synth_clean', 'obs_GAIA', 'obs_APOGEE']
 TRAIN_DATASET_SELECT = 0
-
-project_name = f"{date.today().day}.{date.today().month}.{date.today().year}_{project_id}_"
-# Check if the folder already exists and increment the number if needed
-count = 0
-while os.path.exists(os.path.join('outputs', project_name + str(count))):
-    count += 1
-project_name += str(count)
-
+project_name = f"{args.id}_{args.bs}_{args.i}_{args.lrI}_{args.lrF}_{args.vs}_{args.ns}_{TRANSFER_LEARNING}"
 project_dir = os.path.join(output_dir, project_name)
-os.makedirs(project_dir)
+
+if os.path.exists(project_dir):
+    # Log a warning that the project folder already exists and will be overwritten
+    print(f"WARNING: Project folder '{project_name}' already exists. Overwriting...")
+
+# Create or overwrite the project folder
+os.makedirs(project_dir, exist_ok=True)
 
 logger = StarLogger(project_dir)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
