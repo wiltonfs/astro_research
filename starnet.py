@@ -352,8 +352,8 @@ logger.log("Results have been saved to " + results_dir)
 logger.log("Done!")
 logger.close()
 
-#Print project name as the output of the script
-print(project_name)
+#Print project name to the output of the script, between dollar signs so it is easier to find
+print("$"+project_name+"$")
 
 
 
