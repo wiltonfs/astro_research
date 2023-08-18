@@ -13,7 +13,7 @@ module load python scipy-stack
 source ~/astroPy/bin/activate
 
 # Train model
-project_name=$(python starnet.py --i 100 --vs 5 --ns 0 | grep -oP '\$([^$]+)\$')
+project_name=$(python starnet.py --i 100000 --vs 25 --ns 0 | grep -oP '\$([^$]+)\$')
 project_name=${project_name:1:-1}
 # Generate visualizations
 python indiv-results.py --p "$project_name"

@@ -23,6 +23,7 @@ bs_value=$1
 i_value=$2
 
 # Train model
-project_name=$(python starnet.py --id "EpochNorm/Grid" --bs $bs_value --i $i_value --vs 25  --ns 0)
+project_name=$(python starnet.py --id "EpochNorm/Grid" --bs $bs_value --i $i_value --vs 25  --ns 0 | grep -oP '\$([^$]+)\$')
+project_name=${project_name:1:-1}
 # Generate visualizations
 python indiv-results.py --p "$project_name"
