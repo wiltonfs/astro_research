@@ -8,8 +8,8 @@
 #SBATCH --mail-type=ALL
 
 # Check if the required number of arguments are provided
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <bs_value> <i_value>"
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <bs_value> <lrI_value> <lrF_value>"
     exit 1
 fi
 
@@ -20,10 +20,11 @@ source ~/astroPy/bin/activate
 
 # Access the arguments passed to the script and use them in the Python command
 bs_value=$1
-i_value=$2
+lrI_value=$2
+lrF_value=$3
 
 # Train model
-project_name=$(python starnet.py --id "EpochNorm/Grid" --bs $bs_value --i $i_value --vs 25  --ns 0 | grep -oP '\$([^$]+)\$')
+project_name=$(python starnet.py --id "SynthLRTune/Grid" --bs $bs_value --lrI $lrI_value --lrF $lrF_value --i 1600 --vs 25  --ns 0 | grep -oP '\$([^$]+)\$')
 project_name=${project_name:1:-1}
 # Generate visualizations
 python indiv-results.py --p "$project_name"
