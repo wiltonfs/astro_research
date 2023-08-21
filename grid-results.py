@@ -6,8 +6,8 @@ import csv
 import matplotlib.pyplot as plt
 
 grid_ID = 'EpochNorm'
-outPath = 'remoteOutputs/outputs/'
-variables = ["batch size","iters","epochs"]
+outPath = 'remoteOutputs/'
+variables = ["batch size","iters","epochs", "initial learning rate", "final learning rate"]
 
 
 
