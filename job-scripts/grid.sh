@@ -12,6 +12,7 @@ cd $PROJECT/astro_research
 num_searches=50
 
 batch_range=(16 1024)
+iter_range=(100 3000)
 lr_initial_range=(0.01 0.0001)
 lr_final_range=(0.001 0.00001)
 ns_range=(0.0 0.3)
@@ -32,14 +33,14 @@ function random_float() {
 
 # Loop for num_searches iterations
 for ((i=1; i<=$num_searches; i++)); do
-  ID="NoiseTune/Grid"
+  ID="EpochTune/Grid"
   #bs=$(random_int ${batch_range[0]} ${batch_range[1]})
-  bs=32
+  bs=$(random_int ${batch_range[0]} ${batch_range[1]})
   #lrI=$(random_float ${lr_initial_range[0]} ${lr_initial_range[1]})
   lrI=0.006
   lrF=0.0005
-  I=100000
-  ns=$(random_float ${ns_range[0]} ${ns_range[1]})
+  I=$(random_int ${iter_range[0]} ${iter_range[1]})
+  ns=0.0
 
   echo "Iteration $i:"
   echo "batch size = $bs"
