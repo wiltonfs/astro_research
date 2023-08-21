@@ -6,3 +6,7 @@ total_batch_iters = int(1e5)
 val_steps = 25
 output_dir = 'outputs'
 data_dir = 'data'
+
+
+initial learning rate = 0.006
+final learning rate = 0.0005
