@@ -8,10 +8,15 @@
 #SBATCH --mail-type=ALL
 #SBATCH --output=/home/wiltonfs/scratch/wiltonfs/astro_research/outputs/slurm
 
-cd /home/wiltonfs/scratch/wiltonfs/astro_research
+cd $SCRATCH/astro_research
 module purge
 module load python scipy-stack
 source ~/astroPy/bin/activate
+
+# weights and biases
+pip install --no-index wandb
+wandb login $WAND_API_KEY 
+wandb offline
 
 # Train model
 project_name=$(python starnet.py --i 1000 --vs 25 --ns 0 | grep -oP '\$([^$]+)\$')
