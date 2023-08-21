@@ -12,6 +12,7 @@ import time
 import torch
 from torch.optim.lr_scheduler import StepLR
 import argparse
+import wandb
 
 from utils.star_model import *
 from utils.star_logger import *
@@ -55,6 +56,29 @@ datasets = ['synth_clean', 'obs_GAIA', 'obs_APOGEE']
 TRAIN_DATASET_SELECT = 0
 project_name = f"{args.id}_{args.bs}_{args.i}_{args.lrI}_{args.lrF}_{args.vs}_{args.ns}_{TRANSFER_LEARNING}"
 project_dir = os.path.join(output_dir, project_name)
+
+# start a new wandb run to track this script
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="Astro_AI",
+    name=project_name,
+    
+    # track hyperparameters and run metadata
+    config={
+    'project_id': project_id,
+    'batch_size': batch_size,
+    'initial_learning_rate': initial_learning_rate,
+    'final_learning_rate': final_learning_rate,
+    'total_batch_iters': total_batch_iters,
+    'val_steps': val_steps,
+    'TRANSFER_LEARNING': TRANSFER_LEARNING,
+    'noise_mean': noise_mean,
+    'noise_std': noise_std,
+    'label_keys': label_keys,
+    'datasets': datasets,
+    'TRAIN_DATASET_SELECT': TRAIN_DATASET_SELECT
+}
+)
 
 if os.path.exists(project_dir):
     # Log a warning that the project folder already exists and will be overwritten
@@ -180,6 +204,7 @@ while cur_iter < (total_batch_iters):
             std_perc = train_std / train_loss * 100
             logger.log(f'\tTrain Loss: {train_loss:0.4f} +- {std_perc:0.2f}%')
             logger.log('\tTrain time taken: %0.0f seconds' % (val_start_time - iters_start_time))
+            wandb.log({"train loss": train_loss, "train time": (val_start_time - iters_start_time)})
 
             # Set parameters to not trainable
             model.eval()
