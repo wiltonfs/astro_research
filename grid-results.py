@@ -5,9 +5,10 @@
 import csv
 import matplotlib.pyplot as plt
 
-grid_ID = 'EpochNorm'
+grid_ID = 'NoiseTune'
 outPath = 'remoteOutputs/'
-variables = ["batch size","iters","epochs", "initial learning rate", "final learning rate"]
+ind_vars = ["noise std"]
+dep_vars = ["val_loss", "eval_loss_obs_GAIA", "eval_loss_obs_APOGEE"]
 
 
 
@@ -41,18 +42,20 @@ plt.xticks(range(len(sorted_data)), [row[0] for row in sorted_data], rotation=45
 plt.tight_layout()  # To prevent label clipping
 plt.savefig(f'{outPath}{grid_ID}/losses.png')
 
-# Plot each variable in variables vs val_loss
-for variable in variables:
-    variable_ID = header.index(variable)
-    plt.figure(figsize=(10, 6))
-    x = [float(row[variable_ID]) for row in sorted_data]  # Extract and convert variable values
-    y = [float(row[val_loss_ID]) for row in sorted_data]  # Extract and convert validation loss values
-    plt.scatter(x, y)
-    plt.xlabel(variable)
-    plt.ylabel('Validation Loss')
-    plt.title(f'Validation Loss vs {variable}')
-    plt.tight_layout()  # To prevent label clipping
-    plt.savefig(f'{outPath}{grid_ID}/{variable}.png')
+# Plot each independant variable vs dependant variable
+for dep in dep_vars:
+    dep_ID = header.index(dep)
+    for ind in ind_vars:
+        ind_ID = header.index(ind)
+        plt.figure(figsize=(10, 6))
+        x = [float(row[ind_ID]) for row in sorted_data]  # Extract and convert variable values
+        y = [float(row[dep_ID]) for row in sorted_data]  # Extract and convert validation loss values
+        plt.scatter(x, y)
+        plt.xlabel(ind)
+        plt.ylabel(dep)
+        plt.title(f'{dep} vs {ind}')
+        plt.tight_layout()  # To prevent label clipping
+        plt.savefig(f'{outPath}{grid_ID}/{dep} vs {ind}.png')
 
 # Print the projects from grid_ID with the 3 lowest val_loss values
 print(f"Trials from {grid_ID} with the 3 lowest val_loss:")
