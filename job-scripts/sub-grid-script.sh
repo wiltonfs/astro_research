@@ -5,11 +5,10 @@
 #SBATCH --ntasks-per-node=8
 #SBATCH --time=3:00:0
 #SBATCH --mail-user=wiltonfs@student.ubc.ca
-#SBATCH --mail-type=ALL
 
 # Check if the required number of arguments are provided
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <bs_value> <lrI_value> <lrF_value>"
+if [ "$#" -ne 6 ]; then
+    echo "Usage: $0 <ID> <bs> <lrI> <lrF> <i> <ns>"
     exit 1
 fi
 
@@ -19,12 +18,15 @@ module load python scipy-stack
 source ~/astroPy/bin/activate
 
 # Access the arguments passed to the script and use them in the Python command
-bs_value=$1
-lrI_value=$2
-lrF_value=$3
+ID=$1
+bs=$2
+lrI=$3
+lrF=$4
+i=$5
+ns=$6
 
 # Train model
-project_name=$(python starnet.py --id "SynthLRTune/Grid" --bs $bs_value --lrI $lrI_value --lrF $lrF_value --i 1600 --vs 25  --ns 0 | grep -oP '\$([^$]+)\$')
+project_name=$(python starnet.py --id $ID --bs $bs --lrI $lrI --lrF $lrF --i $i --vs 25  --ns $ns | grep -oP '\$([^$]+)\$')
 project_name=${project_name:1:-1}
 # Generate visualizations
 python indiv-results.py --p "$project_name"
