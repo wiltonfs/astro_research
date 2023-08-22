@@ -57,13 +57,11 @@ TRAIN_DATASET_SELECT = 0
 project_name = f"{args.id}_{args.bs}_{args.i}_{args.lrI}_{args.lrF}_{args.vs}_{args.ns}_{TRANSFER_LEARNING}"
 project_dir = os.path.join(output_dir, project_name)
 
-# start a new wandb run to track this script
 wandb.init(
     # set the wandb project where this run will be logged
     project="Astro_AI",
     name=project_name,
-    
-    # track hyperparameters and run metadata
+    # track hyperparameters
     config={
     'project_id': project_id,
     'batch_size': batch_size,
@@ -230,6 +228,7 @@ while cur_iter < (total_batch_iters):
                 std_perc = val_std / val_loss * 100
                 logger.log(f'\tVal Loss: {val_loss:0.4f} +- {std_perc:0.2f}%')
                 logger.log('\tValidation time taken: %0.0f seconds' % (time.time() - val_start_time))
+                wandb.log({"val loss": val_loss, "val time": (time.time() - val_start_time)})
 
                 eval_start_time = time.time()
 
@@ -251,6 +250,7 @@ while cur_iter < (total_batch_iters):
                         eval_std = np.nanstd(running_loss)
                         losses['eval_loss_'+dataset].append(eval_loss)         
                         losses['eval_std_'+dataset].append(eval_std)
+                        wandb.log({"eval_loss_"+dataset: eval_loss})
                     logger.log('\tTransfer learning evaluation time taken: %0.0f seconds' % (time.time() - eval_start_time))  
             
             running_loss = []
