@@ -53,4 +53,17 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
                 'labels':labels}
     
 
+    
+    def __toX__(self):
+        '''Return all spectra as a numpy array.'''
+        with h5py.File(self.data_file, "r") as f:
+            return f['spectra %s' % self.dataset][:]
+        
+    def __toY__(self, label_key):
+        '''Return all labels as a numpy array.'''
+        with h5py.File(self.data_file, "r") as f:
+            return f[label_key + ' %s' % self.dataset][:]
+        
+    
+
 

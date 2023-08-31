@@ -14,10 +14,9 @@ model = StarNetConformalIntervals()
 print("Started training!")
 model.fit(train_dataset)
 print("Finished training!")
-predictions = model.predict(test_dataset)
+model_pred_labels, model_pred_intervals = model.predict(test_dataset)
 print("Finished predicting!")
 
-print(predictions)
 
 
 

@@ -50,9 +50,12 @@ class StarNetConformalIntervals():
                     break
 
         # Finished training
+        print("Finished training!")
         model.eval()
 
         self.model = model
+
+        print("MAPIE Time!")
 
         # MAPIE only handles single label regression:
         # We will already have a model trained
@@ -60,14 +63,17 @@ class StarNetConformalIntervals():
         # Pass the train data in and "train" the regressor
         # Pass the test data in and "predict" the regressor
         # Compile the results into one output
-        '''
-        for label in labels:
-            model = StarNetSciKitMAPIE(trueModel)
-            mapie_regressor = MapieRegressor(model)
-            mapie_regressor.fit(X_train, y)
-        '''
+        X_train = star_dataset.__toX__()
+        self.mapie_regressors = []
+        for label in star_dataset.label_keys:
+            print("Training MAPIE regressor for label: ", label)
+            mapie_regressor = MapieRegressor(StarNetSciKitMAPIE())
+            y_train = star_dataset.__toY__(label)
+            mapie_regressor.fit(X_train, y_train)
+            self.mapie_regressors.append(mapie_regressor)
         
-    def predict(self, star_dataset):
+        
+    def predict(self, star_dataset, alpha=0.1):
         with torch.no_grad():
             model_pred_labels = []
             dataloader = torch.utils.data.DataLoader(star_dataset, batch_size=1024, shuffle=False, num_workers=0, pin_memory=True)
@@ -80,4 +86,17 @@ class StarNetConformalIntervals():
                 model_pred_labels.append(label_preds.cpu().data.numpy())
 
         # Flatten the predictions into an n x 4 array
-        return np.concatenate(model_pred_labels, axis=0)
+        model_pred_labels = np.concatenate(model_pred_labels, axis=0)
+
+        print("MAPIE Time!")
+        model_pred_intervals = np.zeros((len(model_pred_labels), len(star_dataset.label_keys), 2))
+        X_pred = star_dataset.__toX__()
+        for i, mapie_regressor in enumerate(self.mapie_regressors):
+            print("Predicting MAPIE regressor for label: ", star_dataset.label_keys[i])
+            Y_pred = model_pred_labels[:, i]
+            prediction, prediction_interval = mapie_regressor.predict(X_pred, Y_pred, alpha=alpha)
+            model_pred_intervals[:, i, 0] = prediction.squeeze() - prediction_interval[:, 0].squeeze()  # Calculate the lower errors
+            model_pred_intervals[:, i, 1] = prediction_interval[:, 1].squeeze() - prediction.squeeze()  # Calculate the upper errors
+        
+        return model_pred_labels, model_pred_intervals
+

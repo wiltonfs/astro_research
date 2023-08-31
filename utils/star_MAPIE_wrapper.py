@@ -7,10 +7,11 @@ from sklearn.base import BaseEstimator
 
 class StarNetSciKitMAPIE(BaseEstimator):
     def __init__(self):
-        pass
+        print("StarNetSciKitMAPIE init")
 
     def fit(self, X, y):
-        pass
+        print("StarNetSciKitMAPIE fit")
         
     def predict(self, X, y=None):
+        print("StarNetSciKitMAPIE predict")
         return y
