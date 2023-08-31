@@ -22,7 +22,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='StarNet Hyperparameters')
     parser.add_argument('--id', type=str, default='Simple', help='Project identifier')
     parser.add_argument('--bs', type=int, default=16, help='Batch size for training (default: 16)')
-    parser.add_argument('--lrI', type=float, default=0.01, help='Initial Learning rate for training (default: 0.01)')
+    parser.add_argument('--lrI', type=float, default=0.006, help='Initial Learning rate for training (default: 0.01)')
     parser.add_argument('--lrF', type=float, default=0.0005, help='Final Learning rate for training. Learning rate approaches this through a geometric decay (default: 0.0005)')
     parser.add_argument('--i', type=int, default=int(1e2), help='Training iterations (default: 100)')
     parser.add_argument('--vs', type=int, default=5, help='Validation steps during training (default: 5)')
@@ -115,13 +115,6 @@ logger.log('Logged model parameters')
 train_data_file = os.path.join(data_dir, datasets[TRAIN_DATASET_SELECT] + '.h5')
 model_filename =  os.path.join(project_dir,'model.pth.tar')
 
-# Collect mean and std of the training data for normalization
-with h5py.File(train_data_file, "r") as f:
-    labels_mean = [np.nanmean(f[k + ' train'][:]) for k in label_keys]
-    labels_std = [np.nanstd(f[k + ' train'][:]) for k in label_keys]
-    spectra_mean = np.nanmean(f['spectra train'][:]) + noise_mean
-    spectra_std = np.nanstd(f['spectra train'][:]) + noise_std
-
 ## DATASETS
 
 # Training data
@@ -141,7 +134,7 @@ logger.log('The training set consists of %i spectra.' % (len(train_dataset)))
 epochs = (total_batch_iters*batch_size) / len(train_dataset)
 logger.log(f'At {total_batch_iters} iterations, with {batch_size} samples per batch, this model will "see" {epochs:.2f} epochs')
 
-model = StarNet(label_keys, device, train_dataset, spectra_mean, spectra_std, labels_mean, labels_std)
+model = StarNet(device, train_dataset)
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), initial_learning_rate, weight_decay=0)
 

@@ -10,26 +10,23 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
     Dataset loader for the simple spectral datasets.
     """
 
-    def __init__(self, data_file, dataset, label_keys):
+    def __init__(self, data_file, dataset, label_keys = ['teff', 'feh', 'logg', 'alpha'], noise_mean=0., noise_std=0.):
         self.data_file = data_file
         self.dataset = dataset.lower()
         self.label_keys = label_keys
+        self.num_labels = len(label_keys)
         # Determine the number of pixels in each spectrum
-        self.num_pixels = self.determine_num_pixels()
-        self.num_spectra = self.determine_num_spectra()
+        # Collect mean and std of the training data for normalization
+        with h5py.File(data_file, "r") as f:
+            self.num_spectra = len(f['spectra %s' % self.dataset])
+            self.num_pixels = f['spectra %s' % self.dataset].shape[1]
+            self.labels_mean = [np.nanmean(f[k + ' train'][:]) for k in label_keys]
+            self.labels_std = [np.nanstd(f[k + ' train'][:]) for k in label_keys]
+            self.spectra_mean = np.nanmean(f['spectra train'][:]) + noise_mean
+            self.spectra_std = np.nanstd(f['spectra train'][:]) + noise_std
                         
     def __len__(self):
         return self.num_spectra
-    
-    def determine_num_spectra(self):
-        with h5py.File(self.data_file, "r") as f:    
-            count = len(f['spectra %s' % self.dataset])
-        return count
-    
-    def determine_num_pixels(self):
-        with h5py.File(self.data_file, "r") as f:    
-            pixels = f['spectra %s' % self.dataset].shape[1]
-        return pixels
     
     def __getitem__(self, idx):
         
