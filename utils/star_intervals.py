@@ -1,20 +1,19 @@
-# # Scikit Wrapper for starnet
+# # Starnet, with prediction intervals
 # Felix Wilton
 # 8/30/2023
 
 import torch
-from sklearn.base import BaseEstimator
+from mapie.regression import MapieRegressor
 
 from utils.star_model import *
+from utils.star_MAPIE_wrapper import *
 
-class StarNetSciKit(BaseEstimator):
+class StarNetConformalIntervals():
     def __init__(self):
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.model = None
         
-    def fit(self, X, y, iters=1000, batch_size=16, initial_learning_rate=0.006, final_learning_rate=0.0005):
-        # Train your StarNet model on star_dataset for iters iterations
-        star_dataset = X
+    def fit(self, star_dataset, iters=100, batch_size=16, initial_learning_rate=0.006, final_learning_rate=0.0005):
         total_batch_iters = iters
         cur_iter = 0
 
@@ -34,7 +33,7 @@ class StarNetSciKit(BaseEstimator):
                 # Set parameters to trainable
                 model.train()
                 # Switch to GPU if available
-                train_batch = star_dataset.batch_to_device(train_batch, self.device)
+                train_batch = batch_to_device(train_batch, self.device)
                 # Zero the parameter gradients
                 optimizer.zero_grad()
                 # Forward propagation
@@ -47,19 +46,38 @@ class StarNetSciKit(BaseEstimator):
                 optimizer.step()
                 scheduler.step()
                 cur_iter += 1
+                if cur_iter >= total_batch_iters:
+                    break
 
         # Finished training
         model.eval()
+
+        self.model = model
+
+        # MAPIE only handles single label regression:
+        # We will already have a model trained
+        # Make mapie_regressor for each label
+        # Pass the train data in and "train" the regressor
+        # Pass the test data in and "predict" the regressor
+        # Compile the results into one output
+        '''
+        for label in labels:
+            model = StarNetSciKitMAPIE(trueModel)
+            mapie_regressor = MapieRegressor(model)
+            mapie_regressor.fit(X_train, y)
+        '''
         
-    def predict(self, X):
-        star_dataset = X
+    def predict(self, star_dataset):
         with torch.no_grad():
             model_pred_labels = []
             dataloader = torch.utils.data.DataLoader(star_dataset, batch_size=1024, shuffle=False, num_workers=0, pin_memory=True)
             for batch in dataloader:
                 # Switch to GPU if available
-                batch = star_dataset.batch_to_device(batch, self.device)
+                batch = batch_to_device(batch, self.device)
                 # Forward propagation (and denormalize outputs)
                 label_preds = self.model(batch['spectrum'], norm_in=True, denorm_out=True)
                 # Save results
                 model_pred_labels.append(label_preds.cpu().data.numpy())
+
+        # Flatten the predictions into an n x 4 array
+        return np.concatenate(model_pred_labels, axis=0)

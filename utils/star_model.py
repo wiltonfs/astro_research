@@ -12,6 +12,19 @@ def compute_out_size(in_size, mod):
     f = mod.forward(autograd.Variable(torch.Tensor(1, *in_size)))
     return f.size()[1:]
 
+def batch_to_device(batch, device):
+    '''Convert a batch of samples to the desired device.'''
+    for k in batch.keys():
+        if isinstance(batch[k], list):
+            for i in range(len(batch[k])):
+                batch[k][i] = batch[k][i].to(device)
+        else:
+            try:
+                batch[k] = batch[k].to(device)
+            except AttributeError:
+                batch[k] = torch.tensor(batch[k]).to(device)
+    return batch
+
 class StarNet(nn.Module):
 
     # ## Construct model
