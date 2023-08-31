@@ -14,7 +14,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 # Train a base regression model (e.g., linear regression)
 base_model = LinearRegression()
-base_model.fit(X_train, y_train)
+#base_model.fit(X_train, y_train)
 
 # Initialize MAPIERegressor with the base model
 mapie_regressor = MapieRegressor(base_model)
