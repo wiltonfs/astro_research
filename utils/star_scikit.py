@@ -9,12 +9,13 @@ from utils.star_model import *
 from utils.star_datasets import *
 
 class StarNetScikit(BaseEstimator):
-    def __init__(self):
+    def __init__(self, iters):
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.model = None
+        self.iters = iters
         
     def fit(self, X, y, iters=1000, batch_size=16, initial_learning_rate=0.006, final_learning_rate=0.0005):
-        total_batch_iters = iters
+        total_batch_iters = self.iters
         cur_iter = 0
 
         star_dataset = SimpleSpectraDataset(X=X,y=y)
