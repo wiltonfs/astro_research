@@ -9,23 +9,26 @@ from utils.star_model import *
 from utils.star_datasets import *
 
 class StarNetScikit(BaseEstimator):
-    def __init__(self, iters):
+    def __init__(self, iters=1000, batch_size=16,initial_learning_rate=0.006, final_learning_rate=0.0005):
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.model = None
         self.iters = iters
+        self.batch_size = batch_size
+        self.initial_learning_rate = initial_learning_rate
+        self.final_learning_rate = final_learning_rate
         
-    def fit(self, X, y, iters=1000, batch_size=16, initial_learning_rate=0.006, final_learning_rate=0.0005):
+    def fit(self, X, y):
         total_batch_iters = self.iters
         cur_iter = 0
 
         star_dataset = SimpleSpectraDataset(X=X,y=y)
-        train_dataloader = torch.utils.data.DataLoader(star_dataset, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        train_dataloader = torch.utils.data.DataLoader(star_dataset, batch_size=self.batch_size, shuffle=True, num_workers=0, pin_memory=True)
         model = StarNet(self.device, star_dataset)
         model = model.to(self.device)
-        optimizer = torch.optim.Adam(model.parameters(), initial_learning_rate, weight_decay=0)
+        optimizer = torch.optim.Adam(model.parameters(), self.initial_learning_rate, weight_decay=0)
 
         # Calculate the learning rate schedule
-        lr_factor = (final_learning_rate / initial_learning_rate) ** (1.0 / total_batch_iters)
+        lr_factor = (self.final_learning_rate / self.initial_learning_rate) ** (1.0 / total_batch_iters)
         scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda epoch: lr_factor ** epoch)
 
 
@@ -56,7 +59,7 @@ class StarNetScikit(BaseEstimator):
         
         
     def predict(self, X):
-        star_dataset = SimpleSpectraDataset(X=X, hasY = False)
+        star_dataset = SimpleSpectraDataset(X=X)
         with torch.no_grad():
             model_pred_labels = []
             dataloader = torch.utils.data.DataLoader(star_dataset, batch_size=1024, shuffle=False, num_workers=0, pin_memory=True)

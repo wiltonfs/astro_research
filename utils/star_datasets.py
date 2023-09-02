@@ -10,10 +10,10 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
     Dataset loader for the simple spectral datasets.
     """
 
-    def __init__(self, X=None,y=None, data_file="", dataset="", label_keys = ['teff', 'feh', 'logg', 'alpha'], noise_mean=0., noise_std=0., hasY = True):
-        if data_file == "":
-            # Loading dataset using numpy array
-            self.hasY = hasY
+    def __init__(self, X=None,y=None, data_file=None, dataset="", label_keys = ['teff', 'feh', 'logg', 'alpha'], noise_mean=0., noise_std=0.):
+        if data_file is None:
+            # Load dataset using numpy array
+            self.hasY = y is not None
             
             self.data_file = data_file
             self.X = X
@@ -23,15 +23,13 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
             self.spectra_std = np.nanstd(X) + noise_std
 
             if self.hasY:
+                if y.ndim == 1:
+                    y = y.reshape(-1, 1)
+
+                self.num_labels = y.shape[1]
+                self.labels_mean = [np.nanmean(y[:,i]) for i in range(self.num_labels)]
+                self.labels_std = [np.nanstd(y[:,i]) for i in range(self.num_labels)]
                 self.y = y
-                if len(y.shape) > 1:
-                    self.num_labels = y.shape[1]
-                    self.labels_mean = [np.nanmean(y[:,i]) for i in range(self.num_labels)]
-                    self.labels_std = [np.nanstd(y[:,i]) for i in range(self.num_labels)]
-                else:
-                    self.num_labels = 1
-                    self.labels_mean = np.nanmean(y)
-                    self.labels_std = np.nanstd(y)
 
         else:
             # Loading dataset using hdf5 file
@@ -53,7 +51,7 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
         return self.num_spectra
     
     def __getitem__(self, idx):
-        if self.data_file == "":
+        if self.data_file is None:
             # Dataset from numpy array
             # Load spectrum
                 spectrum = self.X[idx][:]
@@ -61,10 +59,7 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
                 spectrum = torch.from_numpy(spectrum.astype(np.float32))
                 labels = []
                 if self.hasY:
-                    if self.num_labels > 1:
-                        labels = self.y[idx][:]
-                    else:
-                        labels = self.y[idx]
+                    labels = self.y[idx][:]
                     labels = torch.from_numpy(np.asarray(labels).astype(np.float32))
 
                 return {'spectrum':spectrum,
