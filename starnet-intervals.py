@@ -25,7 +25,7 @@ label_keys = ['teff']#label_keys = ['teff', 'feh', 'logg', 'alpha']
 # Compile the results into one output
 alphas = [0.1, 0.5, 0.9]
 batch_size = 16
-iterss = [100, 1000, 10000, 100000, 1000000]
+iterss = [100, 1000, 10000, 100000]
 
 X_train = train_dataset.__toX__()
 X_pred = test_dataset.__toX__()
