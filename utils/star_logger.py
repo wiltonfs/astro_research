@@ -17,7 +17,9 @@ class StarLogger:
     def log(self, msg):
         current_time = time.time()
         time_diff = current_time - self.start
-        formatted_time = f'[{time_diff:.2f}]\t\t'
+        formatted_time = f'[{time_diff:.2f}]'
+        # Padd formatted time to a fixed length
+        formatted_time = formatted_time + ' ' * (12 - len(formatted_time)) + '\t'
         msg = formatted_time + msg
         print(msg)
         self.file.write(msg + "\n")
