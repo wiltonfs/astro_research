@@ -6,7 +6,7 @@
 #SBATCH --time=3:00:0
 #SBATCH --mail-user=wiltonfs@student.ubc.ca
 #SBATCH --mail-type=ALL
-#SBATCH --output=/home/wiltonfs/scratch/wiltonfs/astro_research/outputs/slurm
+#SBATCH --output=$SCRATCH/astro_research/outputs/slurm
 
 cd $SCRATCH/astro_research
 module purge
@@ -14,4 +14,4 @@ module load python scipy-stack
 source ~/astroPy/bin/activate
 
 # Train model
-python starnet-interval.py
+python starnet-intervals.py
