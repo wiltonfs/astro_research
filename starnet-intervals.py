@@ -8,13 +8,14 @@ from utils.star_logger import *
 
 outDir = "intervalOutputs/"
 logger = StarLogger(outDir)
-logger.log("\n\n## Starting Starnet-Intervals ##\n")
+logger.log("")
+logger.log("## Starting Starnet-Intervals ##")
 
 
 train_data_file = "data/synth_clean.h5"
 train_dataset = SimpleSpectraDataset(data_file=train_data_file, dataset='train')
 test_dataset = SimpleSpectraDataset(data_file=train_data_file, dataset='val')
-label_keys = ['teff', 'feh', 'logg', 'alpha']
+label_keys = ['teff']#label_keys = ['teff', 'feh', 'logg', 'alpha']
 
 # MAPIE only handles single label regression:
 # We will already have a model trained
@@ -23,55 +24,59 @@ label_keys = ['teff', 'feh', 'logg', 'alpha']
 # Pass the test data in and "predict" the regressor
 # Compile the results into one output
 alphas = [0.1, 0.5, 0.9]
-iterss = [100, 10000, 1000000]
+batch_size = 16
+iterss = [100, 1000, 10000, 100000, 1000000]
 
 X_train = train_dataset.__toX__()
 X_pred = test_dataset.__toX__()
 logger.log("X_train shape: " + str(X_train.shape))
-logger.log("X_pred shape: " + str(X_pred.shape))
+logger.log("X_pred shape: " + str(X_pred.shape) + "\n")
 
 for iters in iterss:
-    logger.log("\n\n\t\t\t\t $$$$$$$$$$$ iters = " + str(iters))
-    for alpha in alphas:
-        logger.log("\n\n\t\t\t $$$$$$$$$$$ alpha = " + str(alpha))
-        for label in label_keys:
-            logger.log("\n\nMAPIE regressor for label: " + label)
-            y_train = train_dataset.__toY__(label)
-            y_pred = test_dataset.__toY__(label)
-            logger.log("\ty_train shape: " + str(y_train.shape))
-            logger.log("\ty_pred shape: " + str(y_pred.shape))
-            mapie_regressor = MapieRegressor(StarNetScikit(iters))
-            logger.log("\tStarting fit...")
-            mapie_regressor.fit(X_train, y_train)
-            logger.log("\tFinished fit!")
+    for label in label_keys:
+        epochs = (iters*batch_size) / len(train_dataset)
+        logger.log("MAPIE regressor for label: " + label)
+        logger.log(f"\titers = {iters:.0f}")
+        logger.log(f"\tepochs = {epochs:.3f}")
+        y_train = train_dataset.__toY__(label)
+        y_pred = test_dataset.__toY__(label)
+        mapie_regressor = MapieRegressor(StarNetScikit(iters, batch_size))
+        logger.log("\tStarting fit...")
+        fitTimer = time.time()
+        mapie_regressor.fit(X_train, y_train)
+        #print time in seconds with 2 decimal points
+        logger.log(f"\tFinished fit in {(time.time() - fitTimer):.1f} seconds!")
+        logger.log("\tTrying different alpha values...\n")
+        for alpha in alphas:
+            confidence = (1 - alpha) * 100.0
+            logger.log(f"\t\talpha = {alpha:.2f}")
+            logger.log(f"\t\tconfidence = {confidence:.1f}%")
+            logger.log("\t\tStarting prediction...")
+            predictionTimer = time.time()
             prediction, prediction_interval = mapie_regressor.predict(X_pred, alpha=alpha)  # alpha determines the prediction level
-            logger.log("\tFinished prediction!")
+            logger.log(f"\t\tFinished prediction in {(time.time() - predictionTimer):.1f} seconds!")
             yerr = np.ones((2, len(X_pred)))
-            logger.log("\tyerr shape: " + str(yerr.shape))
             yerr[0, :] = prediction.squeeze() - prediction_interval[:, 0].squeeze()  # Calculate the lower errors
             yerr[1, :] = prediction_interval[:, 1].squeeze() - prediction.squeeze()  # Calculate the upper errors
+            yerr = np.abs(yerr)
             # Create a scatter plot with error bars
             plt.figure(figsize=(10, 10))
             plt.errorbar(y_pred, prediction, yerr=yerr, fmt='o', label=label, color='cornflowerblue', ecolor='cornflowerblue')
+            # Add a line for perfect correlation
+            plt.plot(y_pred, y_pred, color='black', label='Perfect Correlation', alpha=0.5)
             plt.xlabel("True Value")
             plt.ylabel("Predicted Value")
-            plt.title("Scatter Plot with Error Bars - " + label)
+            # title should indicate confidence
+            plt.title(f"Scatter Plot with Error Bars Indicating {confidence:.1f}% Confidence - " + label)
             plt.legend()
             #plt.show()
-            path = outDir + str(iters) + "_" + str(alpha) + "_" + label + "results.png"
+            path = outDir + str(iters) + "_" + str(alpha) + "_" + label + "_results.png"
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
+            logger.log("\t\tSaved plot to " + path + "\n")
     
-logger.log("\n\n\n\n\n\nDone!")
+logger.log("\n\nDone!")
+logger.close()
 
-'''
-model_pred_intervals = np.zeros((len(test_dataset), len(label_keys), 3))
-for i, mapie_regressor in enumerate(mapie_regressors):
-            logger.log("Predicting MAPIE regressor for label: ", label_keys[i])
-            prediction, prediction_interval = mapie_regressor.predict(X_pred, alpha=alpha)
-            model_pred_intervals[:, i, 0] = prediction.squeeze()  # Predicted values
-            model_pred_intervals[:, i, 1] = prediction.squeeze() - prediction_interval[:, 0].squeeze()  # Calculate the lower errors
-            model_pred_intervals[:, i, 2] = prediction_interval[:, 1].squeeze() - prediction.squeeze()  # Calculate the upper errors
-'''
 
 
 
