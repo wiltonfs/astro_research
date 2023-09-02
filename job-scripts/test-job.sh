@@ -5,7 +5,6 @@
 #SBATCH --time=0:5:0
 #SBATCH --mail-user=wiltonfs@student.ubc.ca
 #SBATCH --mail-type=ALL
-#SBATCH --output=$SCRATCH/astro_research/outputs/slurm
 
 cd $SCRATCH/astro_research
 module purge
