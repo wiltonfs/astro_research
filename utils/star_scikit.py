@@ -11,8 +11,6 @@ from utils.star_datasets import *
 class StarNetScikit(BaseEstimator):
     def __init__(self, iters=1000, batch_size=16,initial_learning_rate=0.006, final_learning_rate=0.0005):
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        print('Using Torch version: %s' % (torch.__version__))
-        print('Using a %s device\n' % (self.device))
         self.model = None
         self.iters = iters
         self.batch_size = batch_size

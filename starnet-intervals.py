@@ -11,18 +11,11 @@ logger = StarLogger(outDir)
 logger.log("")
 logger.log("## Starting Starnet-Intervals ##")
 
-
 train_data_file = "data/synth_clean.h5"
 train_dataset = SimpleSpectraDataset(data_file=train_data_file, dataset='train')
 test_dataset = SimpleSpectraDataset(data_file=train_data_file, dataset='val')
-label_keys = ['teff']#label_keys = ['teff', 'feh', 'logg', 'alpha']
+label_keys = ['teff', 'feh', 'logg', 'alpha']
 
-# MAPIE only handles single label regression:
-# We will already have a model trained
-# Make mapie_regressor for each label
-# Pass the train data in and "train" the regressor
-# Pass the test data in and "predict" the regressor
-# Compile the results into one output
 alphas = [0.1, 0.5, 0.9]
 batch_size = 16
 iterss = [100, 1000, 10000, 100000]
@@ -33,6 +26,7 @@ logger.log("X_train shape: " + str(X_train.shape))
 logger.log("X_pred shape: " + str(X_pred.shape) + "\n")
 
 for iters in iterss:
+    # MAPIE only handles single label regression:
     for label in label_keys:
         epochs = (iters*batch_size) / len(train_dataset)
         logger.log("MAPIE regressor for label: " + label)
@@ -72,7 +66,13 @@ for iters in iterss:
             #plt.show()
             path = outDir + str(iters) + "_" + str(alpha) + "_" + label + "_results.png"
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
-            logger.log("\t\tSaved plot to " + path + "\n")
+            logger.log("\t\tSaved plot to " + path)
+
+            # Save prediction, and prediction interval to a file
+            path = outDir + str(iters) + "_" + str(alpha) + "_" + label + "_results.txt"
+            np.savetxt(path, np.c_[y_pred, prediction, prediction_interval[:, 0], prediction_interval[:, 1]], delimiter=',', header='y_true,y_predicted,prediction_interval 0,prediction_interval 1')
+            logger.log("\t\tSaved results to " + path + "\n")
+
     
 logger.log("\n\nDone!")
 logger.close()
