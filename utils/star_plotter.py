@@ -7,6 +7,9 @@ import os
 
 ### Plotting helper functions
 def pretty(label):
+    '''
+    Turns file-friendly label names into pretty label text
+    '''
     label_fancy = label
     
     if label=='teff':
@@ -30,6 +33,9 @@ def pretty(label):
     return label_fancy
 
 def getColor(dataset):
+    '''
+    Get graphing color for each dataset
+    '''
     color = 'blue'
     
     if dataset=='synth_clean':
@@ -44,6 +50,9 @@ def getColor(dataset):
     return color
 
 def getLinestyle(dataset):
+    '''
+    Get linestyle for each dataset
+    '''
     style = '-'
     
     if dataset=='synth_clean':
@@ -59,6 +68,9 @@ def getLinestyle(dataset):
 
 
 class StarPlotter():
+    '''
+    Plot model outputs, including training progress, performance on validation sets, and isochrones
+    '''
     
     def __init__(self, saving_dir, label_keys, datasets, saving=True):
         self.dir = saving_dir
@@ -66,8 +78,10 @@ class StarPlotter():
         self.datasets = datasets
         self.SAVING = saving
     
-    # Plot train and validation loss over the iterations
     def plot_train_progress(self, losses, std=False):
+        '''
+        Plot train and validation loss over the iterations
+        '''
         plt.figure(figsize=(8,3))
 
         eval_alpha = 0.5
@@ -99,8 +113,10 @@ class StarPlotter():
             path = os.path.join(self.dir, "trainProgress.png")
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
 
-    # Plot the isochrones
     def plot_isochrones(self, model_pred_labels):
+        '''
+        Plot isochrones for each dataset
+        '''
         # Create the main figure and set the title
         fig = plt.figure(figsize=(15, 10))
         fig.suptitle('Isochrones', fontsize=16, fontweight='bold')
@@ -137,8 +153,10 @@ class StarPlotter():
             path = os.path.join(self.dir, 'isochrones.png')
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
 
-    #Plot performance on evaluation sets
     def plot_violin_loss(self, model_pred_labels, ground_truth_labels):
+        '''
+        Plot performance on synthetic evaluation set as violin plot
+        '''
         y_lims = [1000, 1, 1, 1, 10]
 
         fig, axes = plt.subplots(len(self.label_keys), 1, figsize=(12, len(self.label_keys)*2.7))
@@ -214,8 +232,10 @@ class StarPlotter():
             path = os.path.join(self.dir,'violin.png')
             plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
 
-    #Plot performance on evaluation sets
     def plot_scatter_losses(self, model_pred_labels, ground_truth_labels):
+        '''
+        Plot performance on evaluation sets as a scatter plot
+        '''
         y_lims = [1000, 1.2, 1.5, 0.8]
         x_lims = [[2000, 9000],
                 [-5.1, 1.1],

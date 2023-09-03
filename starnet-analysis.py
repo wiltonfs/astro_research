@@ -1,4 +1,4 @@
-# # Plot and Analyze Individual Project Results
+# # Plot and Analyze Individual Starnet Results
 # Felix Wilton
 # 7/31/2023
 from utils.star_plotter import *
@@ -17,7 +17,6 @@ def parse_arguments():
 
 # Parse command-line arguments
 args = parse_arguments()
-
 project = args.p
 train_std = args.std
 

@@ -1,3 +1,6 @@
+# # Simple neural network architecture for stellar label estimation
+# Felix Wilton
+# 7/22/2023
 import torch
 import torch.nn as nn
 import torch.autograd as autograd
@@ -8,7 +11,6 @@ def compute_out_size(in_size, mod):
     """
     Compute output size of Module `mod` given an input with size `in_size`.
     """
-    
     f = mod.forward(autograd.Variable(torch.Tensor(1, *in_size)))
     return f.size()[1:]
 
@@ -26,15 +28,14 @@ def batch_to_device(batch, device):
     return batch
 
 class StarNet(nn.Module):
-
-    # ## Construct model
-    # 
-    # The StarNet architecture is built with:
-    # - input layer
-    # - 2 convolutional layers
-    # - 1 maxpooling layer followed by flattening for the fully connected layer
-    # - 2 fully connected layers
-    # - output layer
+    """
+    The StarNet architecture is built with:
+    - input layer
+    - 2 convolutional layers
+    - 1 maxpooling layer followed by flattening for the fully connected layer
+    - 2 fully connected layers
+    - output layer
+    """
 
     def __init__(self, device, star_dataset):
         super().__init__()

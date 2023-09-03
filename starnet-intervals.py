@@ -1,3 +1,6 @@
+# # Run Starnet with MAPIE to get prediction intervals
+# Felix Wilton
+# 8/30/2023
 import numpy as np
 from mapie.regression import MapieRegressor
 

@@ -1,4 +1,4 @@
-# # Datasets and dataset utility functions
+# # Dataset and dataset utility functions
 # Felix Wilton
 # 7/22/2023
 import torch
@@ -51,23 +51,23 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
         return self.num_spectra
     
     def __getitem__(self, idx):
-        if self.data_file is None:
+        if self.data_file is None:    
             # Dataset from numpy array
             # Load spectrum
-                spectrum = self.X[idx][:]
-                spectrum[spectrum<-1] = -1.
-                spectrum = torch.from_numpy(spectrum.astype(np.float32))
-                labels = []
-                if self.hasY:
-                    labels = self.y[idx][:]
-                    labels = torch.from_numpy(np.asarray(labels).astype(np.float32))
+            spectrum = self.X[idx][:]
+            spectrum[spectrum<-1] = -1.
+            spectrum = torch.from_numpy(spectrum.astype(np.float32))
+            # Load target stellar labels
+            labels = []
+            if self.hasY:
+                labels = self.y[idx][:]
+                labels = torch.from_numpy(np.asarray(labels).astype(np.float32))
 
-                return {'spectrum':spectrum,
-                        'labels':labels}
+            return {'spectrum':spectrum,
+                    'labels':labels}
         else:
             # Dataset from hdf5 file
-            with h5py.File(self.data_file, "r") as f: 
-                    
+            with h5py.File(self.data_file, "r") as f:   
                 # Load spectrum
                 spectrum = f['spectra %s' % self.dataset][idx]
                 spectrum[spectrum<-1] = -1.
@@ -83,20 +83,18 @@ class SimpleSpectraDataset(torch.utils.data.Dataset):
                     else:
                         labels.append(np.nan)
                 labels = torch.from_numpy(np.asarray(labels).astype(np.float32))
-                
-            # Return full spectrum and target labels
             return {'spectrum':spectrum,
                     'labels':labels}
     
 
     
     def __toX__(self):
-        '''Return all spectra as a numpy array.'''
+        '''Return all spectra as a numpy array for scikit API functionality.'''
         with h5py.File(self.data_file, "r") as f:
             return f['spectra %s' % self.dataset][:]
         
     def __toY__(self, label_key):
-        '''Return all labels as a numpy array.'''
+        '''Return all labels as a numpy array for scikit API functionality.'''
         with h5py.File(self.data_file, "r") as f:
             return f[label_key + ' %s' % self.dataset][:]
         

@@ -1,4 +1,4 @@
-# # Starnet, adapted to sci-kit learn API
+# # Starnet, wrapped and adapted to sci-kit learn API
 # Felix Wilton
 # 8/30/2023
 
@@ -9,6 +9,9 @@ from utils.star_model import *
 from utils.star_datasets import *
 
 class StarNetScikit(BaseEstimator):
+    '''
+    StarNet model wrapped for use with sci-kit learn API.
+    '''
     def __init__(self, iters=1000, batch_size=16,initial_learning_rate=0.006, final_learning_rate=0.0005):
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.model = None
@@ -18,6 +21,9 @@ class StarNetScikit(BaseEstimator):
         self.final_learning_rate = final_learning_rate
         
     def fit(self, X, y):
+        '''
+        Sci-kit fit method.
+        '''
         total_batch_iters = self.iters
         cur_iter = 0
 
@@ -59,6 +65,9 @@ class StarNetScikit(BaseEstimator):
         
         
     def predict(self, X):
+        '''
+        Sci-kit predict method.
+        '''
         star_dataset = SimpleSpectraDataset(X=X)
         with torch.no_grad():
             model_pred_labels = []

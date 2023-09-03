@@ -1,4 +1,4 @@
-# # Log model progress
+# # Log model training, validation, or plotting progress
 # Felix Wilton
 # 7/22/2023
 import time

@@ -1,4 +1,4 @@
-# # Plot and Analyze Grid Search Results
+# # Plot and Analyze Hyperparameter Search Results
 # Felix Wilton
 # 7/31/2023
 
@@ -6,14 +6,12 @@ import csv
 import matplotlib.pyplot as plt
 
 grid_ID = 'NoiseTune'
-outPath = 'remoteOutputs/'
-ind_vars = ["noise std"]
-dep_vars = ["val_loss", "eval_loss_obs_GAIA", "eval_loss_obs_APOGEE"]
-
-
+targetPath = 'remoteOutputs/'
+ind_vars = ["noise std"] # Independent variables to plot
+dep_vars = ["val_loss", "eval_loss_obs_GAIA", "eval_loss_obs_APOGEE"] # Dependent variables to plot
 
 data = []
-with open(outPath + 'results.csv', 'r') as csvfile:
+with open(targetPath + 'results.csv', 'r') as csvfile:
     csvreader = csv.reader(csvfile)
     header = next(csvreader)
     for row in csvreader:
@@ -40,7 +38,7 @@ plt.ylabel('Validation Loss')
 plt.title(f'Validation Loss for Each Trial in {grid_ID}')
 plt.xticks(range(len(sorted_data)), [row[0] for row in sorted_data], rotation=45, ha='right')  # Set project names on x-axis
 plt.tight_layout()  # To prevent label clipping
-plt.savefig(f'{outPath}{grid_ID}/losses.png')
+plt.savefig(f'{targetPath}{grid_ID}/losses.png')
 
 # Plot each independant variable vs dependant variable
 for dep in dep_vars:
@@ -48,14 +46,14 @@ for dep in dep_vars:
     for ind in ind_vars:
         ind_ID = header.index(ind)
         plt.figure(figsize=(10, 6))
-        x = [float(row[ind_ID]) for row in sorted_data]  # Extract and convert variable values
-        y = [float(row[dep_ID]) for row in sorted_data]  # Extract and convert validation loss values
+        x = [float(row[ind_ID]) for row in sorted_data]
+        y = [float(row[dep_ID]) for row in sorted_data]
         plt.scatter(x, y)
         plt.xlabel(ind)
         plt.ylabel(dep)
         plt.title(f'{dep} vs {ind}')
         plt.tight_layout()  # To prevent label clipping
-        plt.savefig(f'{outPath}{grid_ID}/{dep} vs {ind}.png')
+        plt.savefig(f'{targetPath}{grid_ID}/{dep} vs {ind}.png')
 
 # Print the projects from grid_ID with the 3 lowest val_loss values
 print(f"Trials from {grid_ID} with the 3 lowest val_loss:")
@@ -64,7 +62,3 @@ for i in range(3):
     project_name = sorted_data[i][0]
     val_loss = float(sorted_data[i][val_loss_ID])
     print(f"{project_name}: {val_loss:.5f}")
-
-a = 0
-while True:
-    a += 1
