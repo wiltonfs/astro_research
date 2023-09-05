@@ -72,7 +72,7 @@ class StarPlotter():
     Plot model outputs, including training progress, performance on validation sets, and isochrones
     '''
     
-    def __init__(self, saving_dir, label_keys, datasets, saving=True):
+    def __init__(self, saving_dir, label_keys = ['teff', 'feh', 'logg', 'alpha'], datasets=None, saving=True):
         self.dir = saving_dir
         self.label_keys = label_keys
         self.datasets = datasets
@@ -241,6 +241,7 @@ class StarPlotter():
                 [-5.1, 1.1],
                 [-1, 6],
                 [-0.5, 0.9]]
+        
 
         for i, label in enumerate(self.label_keys):
             # Create the main figure and set the title
@@ -291,6 +292,45 @@ class StarPlotter():
             if self.SAVING:
                 path = os.path.join(self.dir,label + '.png')
                 plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
+
+
+    def plot_scatter_losses_intervals(self, y_true, prediction, prediction_interval, label, alpha, iters, dataset="synth_clean"):
+        '''
+        Plot performance on evaluation set as a scatter plot with error bars
+        '''
+        y_lims = [1000, 1.2, 1.5, 0.8]
+        x_lims = [[2000, 9000],
+                [-5.1, 1.1],
+                [-1, 6],
+                [-0.5, 0.9]]
+        label_keys = ['teff', 'feh', 'logg', 'alpha']
+        i = label_keys.index(label)
+
+        pretty_label = pretty(label)   
+        yerr = np.ones((2, len(y_true)))
+        yerr[0, :] = prediction.squeeze() - prediction_interval[:, 0].squeeze()  # Calculate the lower errors
+        yerr[1, :] = prediction_interval[:, 1].squeeze() - prediction.squeeze()  # Calculate the upper errors
+        yerr = np.abs(yerr)
+        # Create a scatter plot with error bars
+        plt.figure(figsize=(15, 8))
+        color = getColor(dataset)
+        plt.errorbar(y_true, prediction-y_true, yerr=yerr, fmt='s', alpha=0.5, markersize=4, label=label, color=color, ecolor=color)
+        plt.xlabel(pretty_label)
+        plt.ylabel(r'$\Delta$ %s' % pretty_label)
+        plt.title(f"{pretty_label} (Error Bars Indicating {((1-alpha)*100):.1f}% Confidence)")
+        plt.axhline(0, linewidth=2, c='black', linestyle='--')
+        plt.ylim(-y_lims[i], y_lims[i])
+        plt.xlim(x_lims[i][0], x_lims[i][1])
+        plt.yticks([-y_lims[i], -0.5*y_lims[i], 0, 0.5*y_lims[i], y_lims[i]])
+        plt.tick_params(labelsize=2.8*len(self.label_keys))
+        plt.grid()
+        plt.legend()
+        
+        if self.SAVING:
+            path = self.dir + str(iters) + "_" + str(alpha) + "_" + dataset + "_" + label + "_results.png"
+            plt.savefig(path, facecolor='white', transparent=False, dpi=100, bbox_inches='tight', pad_inches=0.05)
+
+        plt.close()
 
 
 
